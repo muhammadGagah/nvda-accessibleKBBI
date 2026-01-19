@@ -25,7 +25,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.dlg: Optional[KBBIDialog] = None
 
 	@scriptHandler.script(
-		description=_("Buka Accessible KBBI."), gesture="kb:NVDA+alt+k"
+		description=_("Buka Accessible KBBI."),
+		gesture="kb:NVDA+alt+k",
 	)
 	def script_showSearchDialog(self, gesture: inputCore.InputGesture):
 		if self.dlg:
@@ -70,7 +71,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if hasattr(focus_obj, "treeInterceptor") and focus_obj.treeInterceptor:
 			try:
 				info = focus_obj.treeInterceptor.makeTextInfo(
-					textInfos.POSITION_SELECTION
+					textInfos.POSITION_SELECTION,
 				)
 				if info and info.text and not info.text.isspace():
 					return info.text.strip()

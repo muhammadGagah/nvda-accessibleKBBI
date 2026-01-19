@@ -5,7 +5,7 @@ import ui as nvdaUI
 import api
 import tones
 import unicodedata
-from typing import Optional, Callable, Any
+from typing import Optional, Callable
 from .client import KBBIClient
 from .config import ConfigManager
 from .models import KBBIResult
@@ -139,13 +139,15 @@ class KBBIDialog(wx.Dialog):
 
 		self.wotd_btn = wx.Button(self, label=_("Kata Hari Ini"))
 		self.wotd_btn.Bind(
-			wx.EVT_BUTTON, lambda e: self.do_api_call(self.client.get_wotd)
+			wx.EVT_BUTTON,
+			lambda e: self.do_api_call(self.client.get_wotd),
 		)
 		tool_sizer.Add(self.wotd_btn, 1, wx.RIGHT, 5)
 
 		self.random_btn = wx.Button(self, label=_("Kata Acak"))
 		self.random_btn.Bind(
-			wx.EVT_BUTTON, lambda e: self.do_api_call(self.client.get_random)
+			wx.EVT_BUTTON,
+			lambda e: self.do_api_call(self.client.get_random),
 		)
 		tool_sizer.Add(self.random_btn, 1, wx.RIGHT, 5)
 
@@ -164,7 +166,8 @@ class KBBIDialog(wx.Dialog):
 		main_sizer.Add(self.result_label, 0, wx.LEFT | wx.RIGHT, 10)
 
 		self.result_area = wx.TextCtrl(
-			self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2
+			self,
+			style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2,
 		)
 		main_sizer.Add(self.result_area, 1, wx.EXPAND | wx.ALL, 10)
 
@@ -340,7 +343,7 @@ class KBBIDialog(wx.Dialog):
 
 			if entry.baseWord:
 				lines.append(
-					f"  Kata Dasar: {unicodedata.normalize('NFKC', entry.baseWord)}"
+					f"  Kata Dasar: {unicodedata.normalize('NFKC', entry.baseWord)}",
 				)
 
 			# Definitions
@@ -355,10 +358,7 @@ class KBBIDialog(wx.Dialog):
 
 					if definition.usageExamples:
 						exs = "; ".join(
-							[
-								unicodedata.normalize("NFKC", ex)
-								for ex in definition.usageExamples
-							]
+							[unicodedata.normalize("NFKC", ex) for ex in definition.usageExamples],
 						)
 						lines.append(f"       Contoh: {exs}")
 
@@ -367,8 +367,8 @@ class KBBIDialog(wx.Dialog):
 				lines.append(
 					"  Kata Turunan: "
 					+ ", ".join(
-						[unicodedata.normalize("NFKC", w) for w in entry.derivedWords]
-					)
+						[unicodedata.normalize("NFKC", w) for w in entry.derivedWords],
+					),
 				)
 
 			# Compound
@@ -376,8 +376,8 @@ class KBBIDialog(wx.Dialog):
 				lines.append(
 					"  Gabungan Kata: "
 					+ ", ".join(
-						[unicodedata.normalize("NFKC", w) for w in entry.compoundWords]
-					)
+						[unicodedata.normalize("NFKC", w) for w in entry.compoundWords],
+					),
 				)
 
 			# Proverbs
@@ -385,8 +385,8 @@ class KBBIDialog(wx.Dialog):
 				lines.append(
 					"  Peribahasa: "
 					+ ", ".join(
-						[unicodedata.normalize("NFKC", w) for w in entry.proverbs]
-					)
+						[unicodedata.normalize("NFKC", w) for w in entry.proverbs],
+					),
 				)
 
 			if idx < len(res.entries):

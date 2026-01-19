@@ -5,7 +5,8 @@ import json
 class ConfigManager:
 	def __init__(self):
 		self.config_path = os.path.join(
-			os.path.dirname(__file__), "accessibleKBBI.json"
+			os.path.dirname(__file__),
+			"accessibleKBBI.json",
 		)
 		self.data = {"history": [], "favorites": []}
 		self.load()

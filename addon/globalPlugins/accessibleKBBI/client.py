@@ -46,7 +46,7 @@ class KBBIClient:
 						referencedLemma=d_data.get("referencedLemma", ""),
 						labels=labels,
 						usageExamples=d_data.get("usageExamples", []),
-					)
+					),
 				)
 
 			entries_list.append(
@@ -59,7 +59,7 @@ class KBBIClient:
 					compoundWords=[w for w in e_data.get("compoundWords", []) if w],
 					metaphors=[w for w in e_data.get("metaphors", []) if w],
 					proverbs=[w for w in e_data.get("proverbs", []) if w],
-				)
+				),
 			)
 
 		return KBBIResult(lemma=lemma, entries=entries_list)
