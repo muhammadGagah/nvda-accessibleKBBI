@@ -81,6 +81,6 @@ repos:
     hooks:
       - id: pyright
         name: type check with pyright
-        entry: uv run pyright
+        entry: pyright
         language: system
         types: [python]
