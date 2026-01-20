@@ -12,7 +12,6 @@ import ui
 import textInfos
 import NVDAObjects.behaviors
 import inputCore
-from typing import Optional
 from .interface import KBBIDialog
 
 addonHandler.initTranslation()
@@ -22,7 +21,7 @@ _ = wx.GetTranslation
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super(GlobalPlugin, self).__init__()
-		self.dlg: Optional[KBBIDialog] = None
+		self.dlg: KBBIDialog | None = None
 
 	@scriptHandler.script(
 		description=_("Buka Accessible KBBI."),
@@ -62,7 +61,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.dlg.search_box.SetValue(text)
 		self.dlg.on_search_click(None)
 
-	def _get_selected_text(self) -> Optional[str]:
+	def _get_selected_text(self) -> str | None:
 		focus_obj = api.getFocusObject()
 		if not focus_obj:
 			return None

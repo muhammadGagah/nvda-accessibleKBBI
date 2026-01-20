@@ -5,7 +5,7 @@ import ui as nvdaUI
 import api
 import tones
 import unicodedata
-from typing import Optional, Callable
+from collections.abc import Callable
 from .client import KBBIClient
 from .config import ConfigManager
 from .models import KBBIResult
@@ -21,8 +21,8 @@ class SelectionDialog(wx.Dialog):
 		title: str,
 		choices: list[str],
 		callback: Callable[[str], None],
-		delete_callback: Optional[Callable[[str], None]] = None,
-		clear_callback: Optional[Callable[[], None]] = None,
+		delete_callback: Callable[[str], None] | None = None,
+		clear_callback: Callable[[], None] | None = None,
 	):
 		super(SelectionDialog, self).__init__(parent, title=title, size=(500, 450))
 		self.callback = callback
@@ -71,7 +71,7 @@ class SelectionDialog(wx.Dialog):
 
 	def on_delete(self, event: wx.Event):
 		sel_idx = self.list_box.GetSelection()
-		if sel_idx != wx.NOT_FOUND:
+		if sel_idx != wx.NOT_FOUND and self.delete_callback:
 			item = self.choices[sel_idx]
 			self.delete_callback(item)
 			self.list_box.Delete(sel_idx)
@@ -81,7 +81,7 @@ class SelectionDialog(wx.Dialog):
 				self.list_box.SetSelection(new_sel)
 
 	def on_clear(self, event: wx.Event):
-		if self.choices:
+		if self.choices and self.clear_callback:
 			dlg = wx.MessageDialog(
 				self,
 				_("Yakin ingin menghapus semua?"),
@@ -106,7 +106,7 @@ class KBBIDialog(wx.Dialog):
 
 		self.client = KBBIClient()
 		self.config = ConfigManager()
-		self.current_result: Optional[KBBIResult] = None
+		self.current_result: KBBIResult | None = None
 		self.Centers()
 
 		self._init_ui()
@@ -140,14 +140,14 @@ class KBBIDialog(wx.Dialog):
 		self.wotd_btn = wx.Button(self, label=_("Kata Hari Ini"))
 		self.wotd_btn.Bind(
 			wx.EVT_BUTTON,
-			lambda e: self.do_api_call(self.client.get_wotd),
+			self.on_wotd_click,
 		)
 		tool_sizer.Add(self.wotd_btn, 1, wx.RIGHT, 5)
 
 		self.random_btn = wx.Button(self, label=_("Kata Acak"))
 		self.random_btn.Bind(
 			wx.EVT_BUTTON,
-			lambda e: self.do_api_call(self.client.get_random),
+			self.on_random_click,
 		)
 		tool_sizer.Add(self.random_btn, 1, wx.RIGHT, 5)
 
@@ -213,10 +213,16 @@ class KBBIDialog(wx.Dialog):
 			else:
 				nvdaUI.message(_("Gagal menyalin."))
 
-	def on_search_click(self, event: Optional[wx.CommandEvent]):
+	def on_search_click(self, event: wx.CommandEvent | None):
 		query = self.search_box.GetValue().strip()
 		if query:
 			self.do_api_call(lambda: self.client.search(query))
+
+	def on_wotd_click(self, event: wx.CommandEvent):
+		self.do_api_call(self.client.get_wotd)
+
+	def on_random_click(self, event: wx.CommandEvent):
+		self.do_api_call(self.client.get_random)
 
 	def on_history(self, event: wx.CommandEvent):
 		history = self.config.get_history()

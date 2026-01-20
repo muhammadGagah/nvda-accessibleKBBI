@@ -4,6 +4,7 @@ import json
 
 class ConfigManager:
 	def __init__(self):
+		super().__init__()
 		self.config_path = os.path.join(
 			os.path.dirname(__file__),
 			"accessibleKBBI.json",

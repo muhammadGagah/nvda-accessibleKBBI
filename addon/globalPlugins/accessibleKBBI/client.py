@@ -1,7 +1,7 @@
 import json
 import logging
 from urllib import request, error, parse
-from typing import Optional, Any
+from typing import Any
 from .models import KBBIResult, Entry, Definition, Label
 
 API_BASE_URL = "https://kbbi.raf555.dev/api/v1"
@@ -10,9 +10,10 @@ USER_AGENT = "NVDA-AccessibleKBBI/1.1"
 
 class KBBIClient:
 	def __init__(self):
+		super().__init__()
 		self.timeout = 15
 
-	def _fetch(self, url: str) -> Optional[dict[str, Any]]:
+	def _fetch(self, url: str) -> dict[str, Any] | None:
 		req = request.Request(url)
 		req.add_header("User-Agent", USER_AGENT)
 		try:
@@ -29,7 +30,7 @@ class KBBIClient:
 			raise ConnectionError(f"Terjadi kesalahan: {str(e)}")
 		return None
 
-	def _parse_response(self, data: Optional[dict[str, Any]]) -> KBBIResult:
+	def _parse_response(self, data: dict[str, Any] | None) -> KBBIResult:
 		if not data or "entries" not in data:
 			raise ValueError("Format data tidak valid.")
 
