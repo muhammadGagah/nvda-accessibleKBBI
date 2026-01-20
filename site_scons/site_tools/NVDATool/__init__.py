@@ -34,11 +34,14 @@ def generate(env: Environment):
 	env.SetDefault(excludePatterns=tuple())
 
 	def addon_action(target: list[Any], source: list[Any], env: Any):
-		return createAddonBundleFromPath(
-			source[0].abspath,
-			target[0].abspath,
-			env["excludePatterns"],
-		) and None
+		return (
+			createAddonBundleFromPath(
+				source[0].abspath,
+				target[0].abspath,
+				env["excludePatterns"],
+			)
+			and None
+		)
 
 	def addon_string(target: list[Any], source: list[Any], env: Any):
 		return f"Generating Addon {target[0]}"
@@ -54,13 +57,16 @@ def generate(env: Environment):
 	env.SetDefault(symbolDictionaries={})
 
 	def manifest_action(target: list[Any], source: list[Any], env: Any):
-		return generateManifest(
-			source[0].abspath,
-			target[0].abspath,
-			addon_info=env["addon_info"],
-			brailleTables=env["brailleTables"],
-			symbolDictionaries=env["symbolDictionaries"],
-		) and None
+		return (
+			generateManifest(
+				source[0].abspath,
+				target[0].abspath,
+				addon_info=env["addon_info"],
+				brailleTables=env["brailleTables"],
+				symbolDictionaries=env["symbolDictionaries"],
+			)
+			and None
+		)
 
 	def manifest_string(target: list[Any], source: list[Any], env: Any):
 		return f"Generating manifest {target[0]}"
@@ -73,14 +79,17 @@ def generate(env: Environment):
 	)
 
 	def translated_manifest_action(target: list[Any], source: list[Any], env: Any):
-		return generateTranslatedManifest(
-			source[1].abspath,
-			target[0].abspath,
-			mo=source[0].abspath,
-			addon_info=env["addon_info"],
-			brailleTables=env["brailleTables"],
-			symbolDictionaries=env["symbolDictionaries"],
-		) and None
+		return (
+			generateTranslatedManifest(
+				source[1].abspath,
+				target[0].abspath,
+				mo=source[0].abspath,
+				addon_info=env["addon_info"],
+				brailleTables=env["brailleTables"],
+				symbolDictionaries=env["symbolDictionaries"],
+			)
+			and None
+		)
 
 	def translated_manifest_string(target: list[Any], source: list[Any], env: Any):
 		return f"Generating translated manifest {target[0]}"
@@ -99,13 +108,16 @@ def generate(env: Environment):
 	env.SetDefault(mdExtensions={})
 
 	def md_action(target: list[Any], source: list[Any], env: Any):
-		return md2html(
-			source[0].path,
-			target[0].path,
-			moFile=env["moFile"].path if env["moFile"] else None,
-			mdExtensions=env["mdExtensions"],
-			addon_info=env["addon_info"],
-		) and None
+		return (
+			md2html(
+				source[0].path,
+				target[0].path,
+				moFile=env["moFile"].path if env["moFile"] else None,
+				mdExtensions=env["mdExtensions"],
+				addon_info=env["addon_info"],
+			)
+			and None
+		)
 
 	def md_string(target: list[Any], source: list[Any], env: Any):
 		return f"Generating {target[0]}"
