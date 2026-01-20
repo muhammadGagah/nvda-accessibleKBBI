@@ -19,7 +19,7 @@ Features include looking up selected text effectively, Word of the Day, and favo
 	addon_licenseURL="https://www.gnu.org/licenses/gpl-2.0.html",
 )
 
-pythonSources: list[str] = ["addon/globalPlugins/accessibleKBBI/*.py"]
+pythonSources: list[str] = ["addon/globalPlugins/accessibleKBBI/*.py", "addon/installTasks.py"]
 
 i18nSources: list[str] = pythonSources + ["buildVars.py"]
 
