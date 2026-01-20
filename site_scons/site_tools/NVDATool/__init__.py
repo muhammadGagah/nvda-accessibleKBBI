@@ -22,6 +22,7 @@ The following environment variables are required to build the HTML:
 
 """
 
+from typing import Any
 from SCons.Script import Environment, Builder
 
 from .addon import createAddonBundleFromPath
@@ -32,15 +33,17 @@ from .docs import md2html
 def generate(env: Environment):
 	env.SetDefault(excludePatterns=tuple())
 
-	addonAction = env.Action(
-		lambda target, source, env: createAddonBundleFromPath(
+	def addon_action(target: list[Any], source: list[Any], env: Any):
+		return createAddonBundleFromPath(
 			source[0].abspath,
 			target[0].abspath,
 			env["excludePatterns"],
-		)
-		and None,
-		lambda target, source, env: f"Generating Addon {target[0]}",
-	)
+		) and None
+
+	def addon_string(target: list[Any], source: list[Any], env: Any):
+		return f"Generating Addon {target[0]}"
+
+	addonAction = env.Action(addon_action, addon_string)
 	env["BUILDERS"]["NVDAAddon"] = Builder(
 		action=addonAction,
 		suffix=".nvda-addon",
@@ -50,34 +53,41 @@ def generate(env: Environment):
 	env.SetDefault(brailleTables={})
 	env.SetDefault(symbolDictionaries={})
 
-	manifestAction = env.Action(
-		lambda target, source, env: generateManifest(
+	def manifest_action(target: list[Any], source: list[Any], env: Any):
+		return generateManifest(
 			source[0].abspath,
 			target[0].abspath,
 			addon_info=env["addon_info"],
 			brailleTables=env["brailleTables"],
 			symbolDictionaries=env["symbolDictionaries"],
-		)
-		and None,
-		lambda target, source, env: f"Generating manifest {target[0]}",
-	)
+		) and None
+
+	def manifest_string(target: list[Any], source: list[Any], env: Any):
+		return f"Generating manifest {target[0]}"
+
+	manifestAction = env.Action(manifest_action, manifest_string)
 	env["BUILDERS"]["NVDAManifest"] = Builder(
 		action=manifestAction,
 		suffix=".ini",
 		src_siffix=".ini.tpl",
 	)
 
-	translatedManifestAction = env.Action(
-		lambda target, source, env: generateTranslatedManifest(
+	def translated_manifest_action(target: list[Any], source: list[Any], env: Any):
+		return generateTranslatedManifest(
 			source[1].abspath,
 			target[0].abspath,
 			mo=source[0].abspath,
 			addon_info=env["addon_info"],
 			brailleTables=env["brailleTables"],
 			symbolDictionaries=env["symbolDictionaries"],
-		)
-		and None,
-		lambda target, source, env: f"Generating translated manifest {target[0]}",
+		) and None
+
+	def translated_manifest_string(target: list[Any], source: list[Any], env: Any):
+		return f"Generating translated manifest {target[0]}"
+
+	translatedManifestAction = env.Action(
+		translated_manifest_action,
+		translated_manifest_string,
 	)
 
 	env["BUILDERS"]["NVDATranslatedManifest"] = Builder(
@@ -88,17 +98,19 @@ def generate(env: Environment):
 
 	env.SetDefault(mdExtensions={})
 
-	mdAction = env.Action(
-		lambda target, source, env: md2html(
+	def md_action(target: list[Any], source: list[Any], env: Any):
+		return md2html(
 			source[0].path,
 			target[0].path,
 			moFile=env["moFile"].path if env["moFile"] else None,
 			mdExtensions=env["mdExtensions"],
 			addon_info=env["addon_info"],
-		)
-		and None,
-		lambda target, source, env: f"Generating {target[0]}",
-	)
+		) and None
+
+	def md_string(target: list[Any], source: list[Any], env: Any):
+		return f"Generating {target[0]}"
+
+	mdAction = env.Action(md_action, md_string)
 	env["BUILDERS"]["md2html"] = env.Builder(
 		action=mdAction,
 		suffix=".html",
