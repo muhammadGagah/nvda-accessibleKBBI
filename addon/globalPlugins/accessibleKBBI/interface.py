@@ -15,9 +15,7 @@ _ = wx.GetTranslation
 
 
 class SelectionDialog(wx.Dialog):
-	"""
-	A dialog for selecting, deleting, or clearing items from a list (e.g., history or favorites).
-	"""
+	"""Dialog for selecting, deleting, or clearing items from a list."""
 
 	def __init__(
 		self,
@@ -28,9 +26,6 @@ class SelectionDialog(wx.Dialog):
 		deleteCallback: Callable[[str], None] | None = None,
 		clearCallback: Callable[[], None] | None = None,
 	):
-		"""
-		Initializes the SelectionDialog.
-		"""
 		super(SelectionDialog, self).__init__(parent, title=title, size=(500, 450))
 		self.callback = callback
 		self.deleteCallback = deleteCallback
@@ -74,9 +69,6 @@ class SelectionDialog(wx.Dialog):
 			self.listBox.SetSelection(0)
 
 	def onSelect(self, event: wx.Event):
-		"""
-		Event handler when an item is selected.
-		"""
 		sel_idx = self.listBox.GetSelection()
 		if sel_idx != wx.NOT_FOUND:
 			selection = self.choices[sel_idx]
@@ -84,9 +76,6 @@ class SelectionDialog(wx.Dialog):
 			self.Close()
 
 	def onDelete(self, event: wx.Event):
-		"""
-		Event handler when the delete button is pressed.
-		"""
 		sel_idx = self.listBox.GetSelection()
 		if sel_idx != wx.NOT_FOUND and self.deleteCallback:
 			item = self.choices[sel_idx]
@@ -98,9 +87,6 @@ class SelectionDialog(wx.Dialog):
 				self.listBox.SetSelection(new_sel)
 
 	def onClear(self, event: wx.Event):
-		"""
-		Event handler when the clear all button is pressed.
-		"""
 		if self.choices and self.clearCallback:
 			dlg = wx.MessageDialog(
 				self,
@@ -118,14 +104,9 @@ class SelectionDialog(wx.Dialog):
 
 
 class KBBIDialog(wx.Dialog):
-	"""
-	Main dialog for the Accessible KBBI add-on.
-	"""
+	"""Main dialog for the Accessible KBBI add-on."""
 
 	def __init__(self, parent: wx.Window):
-		"""
-		Initializes the KBBIDialog.
-		"""
 		super(KBBIDialog, self).__init__(
 			parent,
 			# Translators: Title of the Accessible KBBI dialog.
@@ -137,6 +118,7 @@ class KBBIDialog(wx.Dialog):
 		self.client = KBBIClient()
 		self.config = ConfigManager()
 		self.currentResult: KBBIResult | None = None
+		self._isClosing = False
 		self.Centers()
 
 		self._initUi()
@@ -144,13 +126,11 @@ class KBBIDialog(wx.Dialog):
 		self.resultArea.SetValue("")
 
 	def _initUi(self):
-		"""
-		Initializes the user interface elements.
-		"""
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Bind Escape key to close
 		self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
+		self.Bind(wx.EVT_WINDOW_DESTROY, self.onDestroy)
 
 		# --- Search Area ---
 		input_sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -239,25 +219,29 @@ class KBBIDialog(wx.Dialog):
 	def Centers(self):
 		self.CenterOnScreen()
 
+	def isClosing(self) -> bool:
+		return self._isClosing or self.IsBeingDeleted()
+
+	def destroyDialog(self) -> None:
+		if self.isClosing():
+			return
+		self._isClosing = True
+		self.Destroy()
+
+	def onDestroy(self, event: wx.Event):
+		self._isClosing = True
+		event.Skip()
+
 	def onCloseButton(self, event: wx.CommandEvent):
-		"""
-		Event handler for the close button.
-		"""
 		self.Close()
 
 	def onCharHook(self, event: wx.KeyEvent):
-		"""
-		Event handler for keyboard hooking, specifically the Escape key.
-		"""
 		if event.GetKeyCode() == wx.WXK_ESCAPE:
 			self.Close()
 		else:
 			event.Skip()
 
 	def onCopy(self, event: wx.CommandEvent):
-		"""
-		Event handler for copying result text to clipboard.
-		"""
 		text = self.resultArea.GetValue()
 		if text:
 			if api.copyToClip(text):
@@ -268,29 +252,17 @@ class KBBIDialog(wx.Dialog):
 				nvdaUI.message(_("Gagal menyalin."))
 
 	def onSearchClick(self, event: wx.CommandEvent | None):
-		"""
-		Event handler for the search button.
-		"""
 		query = self.searchBox.GetValue().strip()
 		if query:
 			self.doApiCall(lambda: self.client.search(query))
 
 	def onWotdClick(self, event: wx.CommandEvent):
-		"""
-		Event handler for the Word of the Day button.
-		"""
 		self.doApiCall(self.client.getWotd)
 
 	def onRandomClick(self, event: wx.CommandEvent):
-		"""
-		Event handler for the Random Word button.
-		"""
 		self.doApiCall(self.client.getRandom)
 
 	def onHistory(self, event: wx.CommandEvent):
-		"""
-		Event handler for the History button.
-		"""
 		history = self.config.getHistory()
 		if not history:
 			# Translators: Message announced when history is empty.
@@ -308,21 +280,12 @@ class KBBIDialog(wx.Dialog):
 		dlg.ShowModal()
 
 	def deleteHistoryItem(self, lemma: str):
-		"""
-		Deletes an item from the history.
-		"""
 		self.config.removeHistory(lemma)
 
 	def clearAllHistory(self):
-		"""
-		Clears all items from the history.
-		"""
 		self.config.clearHistory()
 
 	def onFavorites(self, event: wx.CommandEvent):
-		"""
-		Event handler for the Favorites button.
-		"""
 		favs = self.config.getFavorites()
 		if not favs:
 			# Translators: Message announced when favorites list is empty.
@@ -339,25 +302,16 @@ class KBBIDialog(wx.Dialog):
 		dlg.ShowModal()
 
 	def deleteFavoriteItem(self, lemma: str):
-		"""
-		Deletes an item from the favorites list.
-		"""
 		self.config.removeFavorite(lemma)
 		if self.currentResult and self.currentResult.lemma == lemma:
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
 
 	def loadFromHistory(self, query: str):
-		"""
-		Loads a word from history and triggers a search.
-		"""
 		self.searchBox.SetValue(query)
 		self.onSearchClick(None)
 
 	def onToggleFavorite(self, event: wx.CommandEvent):
-		"""
-		Event handler to toggle the favorite status of the current word.
-		"""
 		if not self.currentResult:
 			return
 
@@ -376,9 +330,9 @@ class KBBIDialog(wx.Dialog):
 			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
 
 	def doApiCall(self, func: Callable[[], KBBIResult]):
-		"""
-		Executes an API call in a separate background thread.
-		"""
+		if self.isClosing():
+			return
+
 		self.searchBtn.Disable()
 		self.wotdBtn.Disable()
 		self.randomBtn.Disable()
@@ -390,19 +344,24 @@ class KBBIDialog(wx.Dialog):
 		threading.Thread(target=self._worker, args=(func,), daemon=True).start()
 
 	def _worker(self, func: Callable[[], KBBIResult]):
-		"""
-		Background thread worker for API calls.
-		"""
 		try:
 			result = func()
-			wx.CallAfter(self._onSuccess, result)
+			self._callAfterIfOpen(self._onSuccess, result)
 		except Exception as e:
-			wx.CallAfter(self._onError, str(e))
+			self._callAfterIfOpen(self._onError, str(e))
+
+	def _callAfterIfOpen(self, callback: Callable[..., None], *args: object) -> None:
+		wx.CallAfter(self._runIfOpen, callback, *args)
+
+	def _runIfOpen(self, callback: Callable[..., None], *args: object) -> None:
+		if self.isClosing():
+			return
+		callback(*args)
 
 	def _onSuccess(self, result: KBBIResult):
-		"""
-		Callback executed upon a successful API call.
-		"""
+		if self.isClosing():
+			return
+
 		self._enableControls()
 		self.currentResult = result
 
@@ -431,9 +390,9 @@ class KBBIDialog(wx.Dialog):
 		nvdaUI.message(_("Selesai."))
 
 	def _onError(self, error_msg: str):
-		"""
-		Callback executed upon a failed API call.
-		"""
+		if self.isClosing():
+			return
+
 		self._enableControls()
 		self.resultArea.SetValue(error_msg)
 		tones.beep(150, 100)
@@ -441,9 +400,6 @@ class KBBIDialog(wx.Dialog):
 		nvdaUI.message(_("Error."))
 
 	def _enableControls(self):
-		"""
-		Re-enables the UI controls.
-		"""
 		self.searchBtn.Enable()
 		self.wotdBtn.Enable()
 		self.randomBtn.Enable()
@@ -451,9 +407,6 @@ class KBBIDialog(wx.Dialog):
 		# but we re-enable search controls here so user can try again.
 
 	def _formatResult(self, res: KBBIResult) -> str:
-		"""
-		Formats the KBBI result into a readable string.
-		"""
 		lines = []
 
 		for idx, entry in enumerate(res.entries, 1):

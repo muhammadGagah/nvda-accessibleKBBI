@@ -4,6 +4,10 @@
 
 Add-on ini mengambil data dari [KBBI Daring](https://kbbi.kemendikdasmen.go.id/) (melalui API pihak ketiga) dan menampilkannya dalam antarmuka yang ramah aksesibilitas.
 
+## Privasi
+
+Kata yang Anda cari, termasuk teks yang dipilih melalui pintasan pencarian teks terpilih, dikirim ke API pihak ketiga `kbbi.raf555.dev` untuk mengambil hasil KBBI. Accessible KBBI tidak mengirim riwayat pencarian atau daftar kata yang ditandai secara otomatis.
+
 ## Fitur Utama
 
 - **Pencarian Kata**: Cari definisi kata lengkap dengan ejaan, pelafalan, dan label kelas kata (misal: *n* untuk nomina, *v* untuk verba).

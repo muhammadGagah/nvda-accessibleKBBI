@@ -19,27 +19,20 @@ _ = wx.GetTranslation
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
-	"""
-	Global plugin to provide access to the Accessible KBBI add-on.
-	"""
+	"""Global plugin entry point for Accessible KBBI."""
 
 	def __init__(self):
-		"""
-		Initializes the GlobalPlugin and sets up the dialog state.
-		"""
-		super(GlobalPlugin, self).__init__()
+		super().__init__()
 		self.dlg: KBBIDialog | None = None
 
 	@scriptHandler.script(
 		# Translators: Description for the command to open the Accessible KBBI dialog.
 		description=_("Buka Accessible KBBI."),
+		category=inputCore.SCRCAT_MISC,
 		gesture="kb:NVDA+alt+k",
 	)
 	def script_showSearchDialog(self, gesture: inputCore.InputGesture):
-		"""
-		Script to show the main KBBI search dialog.
-		"""
-		if self.dlg:
+		if self.dlg and not self.dlg.isClosing():
 			self.dlg.Raise()
 			self.dlg.SetFocus()
 			# Translators: Message announced when the KBBI dialog is already open and focused.
@@ -53,13 +46,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@scriptHandler.script(
 		# Translators: Description for the command to search selected text in Accessible KBBI.
 		description=_("Cari teks terpilih di Accessible KBBI."),
+		category=inputCore.SCRCAT_MISC,
 		gesture="kb:NVDA+shift+alt+k",
 	)
 	def script_searchSelection(self, gesture: inputCore.InputGesture):
-		"""
-		Script to search the currently selected text in the KBBI dialog.
-		"""
-		if self.dlg:
+		if self.dlg and not self.dlg.isClosing():
 			self.dlg.Raise()
 			self.dlg.SetFocus()
 			# Translators: Message announced when the KBBI dialog is already open and focused.
@@ -84,7 +75,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		Attempts to retrieve the currently selected text from various focus objects.
 
 		:return: The selected text if found, otherwise None.
-		:rtype: str | None
 		"""
 		focus_obj = api.getFocusObject()
 		if not focus_obj:
@@ -129,10 +119,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 		return None
 
-	def onClose(self, event):
-		"""
-		Event handler for closing the KBBI dialog.
-		"""
-		if self.dlg:
-			wx.CallAfter(self.dlg.Destroy)
-			self.dlg = None
+	def _destroyDialog(self) -> None:
+		dlg = self.dlg
+		if not dlg:
+			return
+		self.dlg = None
+		dlg.destroyDialog()
+
+	def onClose(self, event: wx.Event):
+		self._destroyDialog()
+
+	def terminate(self):
+		self._destroyDialog()
+		super().terminate()
