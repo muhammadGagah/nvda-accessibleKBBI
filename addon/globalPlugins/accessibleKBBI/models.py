@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 
 @dataclass
 class Label:
+	"""Label or tag associated with a dictionary definition."""
+
 	code: str
 	name: str
 	kind: str
@@ -10,6 +12,8 @@ class Label:
 
 @dataclass
 class Definition:
+	"""Single definition of a dictionary entry."""
+
 	definition: str
 	referencedLemma: str = ""
 	labels: list[Label] = field(default_factory=list)
@@ -18,6 +22,8 @@ class Definition:
 
 @dataclass
 class Entry:
+	"""Dictionary entry including forms and definitions."""
+
 	entry: str
 	baseWord: str
 	pronunciation: str
@@ -30,5 +36,7 @@ class Entry:
 
 @dataclass
 class KBBIResult:
+	"""Result returned from a KBBI API search."""
+
 	lemma: str
 	entries: list[Entry] = field(default_factory=list)

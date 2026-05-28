@@ -1,2 +1,3 @@
 v1.1
-- release pertama
+
+* Updated to NVDA 2026.1, and updated addon templates.

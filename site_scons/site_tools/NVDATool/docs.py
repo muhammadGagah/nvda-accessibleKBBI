@@ -56,4 +56,4 @@ def md2html(
 		),
 	)
 	with dest.open("w", encoding="utf-8") as f:
-		f.write(docText)
+		f.write(docText)  # type: ignore

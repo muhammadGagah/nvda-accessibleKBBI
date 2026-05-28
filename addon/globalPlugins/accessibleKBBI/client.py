@@ -1,19 +1,34 @@
 import json
-import logging
 from urllib import request, error, parse
 from typing import Any
+
+from logHandler import log
+
 from .models import KBBIResult, Entry, Definition, Label
 
 API_BASE_URL = "https://kbbi.raf555.dev/api/v1"
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AccessibleKBBI/1.0"
+USER_AGENT = (
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+	"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AccessibleKBBI/1.1"
+)
 
 
 class KBBIClient:
+	"""Client for fetching definitions from the KBBI API."""
+
 	def __init__(self):
 		super().__init__()
 		self.timeout = 15
 
 	def _fetch(self, url: str) -> dict[str, Any] | None:
+		"""
+		Makes an HTTP GET request to the given URL and parses the JSON response.
+
+		:param url: The API endpoint URL to fetch.
+		:return: A dictionary containing the JSON response, or None if the request fails.
+		:raises ValueError: If the API returns a 404 (Not Found).
+		:raises ConnectionError: If there's a network or server error.
+		"""
 		req = request.Request(url)
 		req.add_header("User-Agent", USER_AGENT)
 		try:
@@ -21,16 +36,23 @@ class KBBIClient:
 				if response.getcode() == 200:
 					return json.loads(response.read().decode("utf-8"))
 		except error.HTTPError as e:
-			logging.warning(f"KBBI API HTTP Error: {e.code} for {url}")
+			log.warning(f"KBBI API HTTP Error: {e.code} for {url}")
 			if e.code == 404:
 				raise ValueError("Entri tidak ditemukan.")
 			raise ConnectionError(f"Gagal menghubungi server: {e.code}")
 		except Exception as e:
-			logging.error(f"KBBI API Error: {str(e)}")
+			log.error(f"KBBI API Error: {str(e)}", exc_info=True)
 			raise ConnectionError(f"Terjadi kesalahan: {str(e)}")
 		return None
 
-	def _parse_response(self, data: dict[str, Any] | None) -> KBBIResult:
+	def _parseResponse(self, data: dict[str, Any] | None) -> KBBIResult:
+		"""
+		Parses the raw JSON response from the API into a KBBIResult object.
+
+		:param data: The parsed JSON dictionary from the API.
+		:return: A KBBIResult object containing the parsed lemma and entries.
+		:raises ValueError: If the data format is invalid.
+		"""
 		if not data or "entries" not in data:
 			raise ValueError("Format data tidak valid.")
 
@@ -66,17 +88,20 @@ class KBBIClient:
 		return KBBIResult(lemma=lemma, entries=entries_list)
 
 	def search(self, query: str) -> KBBIResult:
+		"""Search for a specific word in KBBI."""
 		safe_query = parse.quote(query)
 		url = f"{API_BASE_URL}/entry/{safe_query}"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)
 
-	def get_wotd(self) -> KBBIResult:
+	def getWotd(self) -> KBBIResult:
+		"""Fetch the Word of the Day from KBBI."""
 		url = f"{API_BASE_URL}/entry/_wotd"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)
 
-	def get_random(self) -> KBBIResult:
+	def getRandom(self) -> KBBIResult:
+		"""Fetch a random word from KBBI."""
 		url = f"{API_BASE_URL}/entry/_random"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)

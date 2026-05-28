@@ -1,7 +1,8 @@
+import codecs
 import gettext
 from functools import partial
 
-from .typings import AddonInfo, BrailleTables, SymbolDictionaries
+from .typings import AddonInfo, BrailleTables, SymbolDictionaries, SpeechDictionaries
 from .utils import format_nested_section
 
 
@@ -11,9 +12,10 @@ def generateManifest(
 	addon_info: AddonInfo,
 	brailleTables: BrailleTables,
 	symbolDictionaries: SymbolDictionaries,
+	speechDictionaries: SpeechDictionaries,
 ):
 	# Prepare the root manifest section
-	with open(source, "r", encoding="utf-8") as f:
+	with codecs.open(source, "r", "utf-8") as f:
 		manifest_template = f.read()
 	manifest = manifest_template.format(**addon_info)
 	# Add additional manifest sections such as custom braile tables
@@ -25,7 +27,11 @@ def generateManifest(
 	if symbolDictionaries:
 		manifest += format_nested_section("symbolDictionaries", symbolDictionaries)
 
-	with open(dest, "w", encoding="utf-8") as f:
+	# Custom speech pronunciation dictionaries
+	if speechDictionaries:
+		manifest += format_nested_section("speechDictionaries", speechDictionaries)
+
+	with codecs.open(dest, "w", "utf-8") as f:
 		f.write(manifest)
 
 
@@ -37,13 +43,14 @@ def generateTranslatedManifest(
 	addon_info: AddonInfo,
 	brailleTables: BrailleTables,
 	symbolDictionaries: SymbolDictionaries,
+	speechDictionaries: SpeechDictionaries,
 ):
 	with open(mo, "rb") as f:
 		_ = gettext.GNUTranslations(f).gettext
 	vars: dict[str, str] = {}
 	for var in ("addon_summary", "addon_description", "addon_changelog"):
 		vars[var] = _(addon_info[var])
-	with open(source, "r", encoding="utf-8") as f:
+	with codecs.open(source, "r", "utf-8") as f:
 		manifest_template = f.read()
 	manifest = manifest_template.format(**vars)
 
@@ -62,5 +69,9 @@ def generateTranslatedManifest(
 	if symbolDictionaries:
 		manifest += _format_section_only_with_displayName("symbolDictionaries", symbolDictionaries)
 
-	with open(dest, "w", encoding="utf-8") as f:
+	# Custom speech pronunciation dictionaries
+	if speechDictionaries:
+		manifest += _format_section_only_with_displayName("speechDictionaries", speechDictionaries)
+
+	with codecs.open(dest, "w", "utf-8") as f:
 		f.write(manifest)

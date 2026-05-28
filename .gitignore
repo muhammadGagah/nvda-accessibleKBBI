@@ -1,5 +1,5 @@
 addon/doc/*.css
-addon/doc/en/
+addon/doc/id/
 *_docHandler.py
 *.html
 manifest.ini
@@ -8,4 +8,6 @@ manifest.ini
 *.py[co]
 *.nvda-addon
 .sconsign.dblite
+.venv/
 /[0-9]*.[0-9]*.[0-9]*.json
+*.egg-info
