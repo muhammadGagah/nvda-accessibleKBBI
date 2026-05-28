@@ -1,4 +1,4 @@
-from site_scons.site_tools.NVDATool.typings import AddonInfo, BrailleTables, SymbolDictionaries
+from site_scons.site_tools.NVDATool.typings import AddonInfo, BrailleTables, SymbolDictionaries, SpeechDictionaries
 from site_scons.site_tools.NVDATool.utils import _
 
 addon_info = AddonInfo(
@@ -32,3 +32,5 @@ markdownExtensions: list[str] = []
 brailleTables: BrailleTables = {}
 
 symbolDictionaries: SymbolDictionaries = {}
+
+speechDictionaries: SpeechDictionaries = {}
