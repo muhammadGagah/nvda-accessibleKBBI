@@ -15,90 +15,120 @@ _ = wx.GetTranslation
 
 
 class SelectionDialog(wx.Dialog):
+	"""
+	A dialog for selecting, deleting, or clearing items from a list (e.g., history or favorites).
+	"""
+
 	def __init__(
 		self,
 		parent: wx.Window,
 		title: str,
 		choices: list[str],
 		callback: Callable[[str], None],
-		delete_callback: Callable[[str], None] | None = None,
-		clear_callback: Callable[[], None] | None = None,
+		deleteCallback: Callable[[str], None] | None = None,
+		clearCallback: Callable[[], None] | None = None,
 	):
+		"""
+		Initializes the SelectionDialog.
+		"""
 		super(SelectionDialog, self).__init__(parent, title=title, size=(500, 450))
 		self.callback = callback
-		self.delete_callback = delete_callback
-		self.clear_callback = clear_callback
+		self.deleteCallback = deleteCallback
+		self.clearCallback = clearCallback
 		self.choices = list(choices)
 
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
-		self.list_box = wx.ListBox(self, choices=self.choices)
-		self.list_box.Bind(wx.EVT_LISTBOX_DCLICK, self.on_select)
-		sizer.Add(self.list_box, 1, wx.EXPAND | wx.ALL, 10)
+		self.listBox = wx.ListBox(self, choices=self.choices)
+		self.listBox.Bind(wx.EVT_LISTBOX_DCLICK, self.onSelect)
+		sizer.Add(self.listBox, 1, wx.EXPAND | wx.ALL, 10)
 
 		btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+		# Translators: Label for the 'Select' button.
 		select_btn = wx.Button(self, label=_("Pilih"))
-		select_btn.Bind(wx.EVT_BUTTON, self.on_select)
+		select_btn.Bind(wx.EVT_BUTTON, self.onSelect)
 		btn_sizer.Add(select_btn, 0, wx.RIGHT, 5)
 
-		if self.delete_callback:
+		if self.deleteCallback:
+			# Translators: Label for the 'Delete' button.
 			del_btn = wx.Button(self, label=_("Hapus"))
-			del_btn.Bind(wx.EVT_BUTTON, self.on_delete)
+			del_btn.Bind(wx.EVT_BUTTON, self.onDelete)
 			btn_sizer.Add(del_btn, 0, wx.RIGHT, 5)
 
-		if self.clear_callback:
+		if self.clearCallback:
+			# Translators: Label for the 'Clear All' button.
 			clear_btn = wx.Button(self, label=_("Bersihkan Semua"))
-			clear_btn.Bind(wx.EVT_BUTTON, self.on_clear)
+			clear_btn.Bind(wx.EVT_BUTTON, self.onClear)
 			btn_sizer.Add(clear_btn, 0, wx.RIGHT, 5)
 
+		# Translators: Label for the 'Close' button.
 		close_btn = wx.Button(self, wx.ID_CANCEL, label=_("Tutup"))
 		btn_sizer.Add(close_btn, 0)
 
 		sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
 		self.SetSizer(sizer)
-		self.list_box.SetFocus()
+		self.listBox.SetFocus()
 		if self.choices:
-			self.list_box.SetSelection(0)
+			self.listBox.SetSelection(0)
 
-	def on_select(self, event: wx.Event):
-		sel_idx = self.list_box.GetSelection()
+	def onSelect(self, event: wx.Event):
+		"""
+		Event handler when an item is selected.
+		"""
+		sel_idx = self.listBox.GetSelection()
 		if sel_idx != wx.NOT_FOUND:
 			selection = self.choices[sel_idx]
 			self.callback(selection)
 			self.Close()
 
-	def on_delete(self, event: wx.Event):
-		sel_idx = self.list_box.GetSelection()
-		if sel_idx != wx.NOT_FOUND and self.delete_callback:
+	def onDelete(self, event: wx.Event):
+		"""
+		Event handler when the delete button is pressed.
+		"""
+		sel_idx = self.listBox.GetSelection()
+		if sel_idx != wx.NOT_FOUND and self.deleteCallback:
 			item = self.choices[sel_idx]
-			self.delete_callback(item)
-			self.list_box.Delete(sel_idx)
+			self.deleteCallback(item)
+			self.listBox.Delete(sel_idx)
 			self.choices.pop(sel_idx)
-			if self.list_box.GetCount() > 0:
-				new_sel = min(sel_idx, self.list_box.GetCount() - 1)
-				self.list_box.SetSelection(new_sel)
+			if self.listBox.GetCount() > 0:
+				new_sel = min(sel_idx, self.listBox.GetCount() - 1)
+				self.listBox.SetSelection(new_sel)
 
-	def on_clear(self, event: wx.Event):
-		if self.choices and self.clear_callback:
+	def onClear(self, event: wx.Event):
+		"""
+		Event handler when the clear all button is pressed.
+		"""
+		if self.choices and self.clearCallback:
 			dlg = wx.MessageDialog(
 				self,
+				# Translators: Message asking if the user is sure to clear everything.
 				_("Yakin ingin menghapus semua?"),
+				# Translators: Title of the confirmation dialog.
 				_("Konfirmasi"),
 				wx.YES_NO | wx.ICON_QUESTION,
 			)
 			if dlg.ShowModal() == wx.ID_YES:
-				self.clear_callback()
-				self.list_box.Clear()
+				self.clearCallback()
+				self.listBox.Clear()
 				self.choices = []
 			dlg.Destroy()
 
 
 class KBBIDialog(wx.Dialog):
+	"""
+	Main dialog for the Accessible KBBI add-on.
+	"""
+
 	def __init__(self, parent: wx.Window):
+		"""
+		Initializes the KBBIDialog.
+		"""
 		super(KBBIDialog, self).__init__(
 			parent,
+			# Translators: Title of the Accessible KBBI dialog.
 			title=_("Accessible KBBI"),
 			size=(700, 600),
 			style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
@@ -106,238 +136,324 @@ class KBBIDialog(wx.Dialog):
 
 		self.client = KBBIClient()
 		self.config = ConfigManager()
-		self.current_result: KBBIResult | None = None
+		self.currentResult: KBBIResult | None = None
 		self.Centers()
 
-		self._init_ui()
+		self._initUi()
 		# Ensure result area is clean on start
-		self.result_area.SetValue("")
+		self.resultArea.SetValue("")
 
-	def _init_ui(self):
+	def _initUi(self):
+		"""
+		Initializes the user interface elements.
+		"""
 		main_sizer = wx.BoxSizer(wx.VERTICAL)
 
 		# Bind Escape key to close
-		self.Bind(wx.EVT_CHAR_HOOK, self.on_char_hook)
+		self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
 
 		# --- Search Area ---
 		input_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		# Translators: Label asking the user to search a word.
 		input_label = wx.StaticText(self, label=_("Cari kata:"))
 		input_sizer.Add(input_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
 
-		self.search_box = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
-		self.search_box.Bind(wx.EVT_TEXT_ENTER, self.on_search_click)
-		input_sizer.Add(self.search_box, 1, wx.EXPAND)
+		self.searchBox = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
+		self.searchBox.Bind(wx.EVT_TEXT_ENTER, self.onSearchClick)
+		input_sizer.Add(self.searchBox, 1, wx.EXPAND)
 
-		self.search_btn = wx.Button(self, label=_("Cari"))
-		self.search_btn.Bind(wx.EVT_BUTTON, self.on_search_click)
-		input_sizer.Add(self.search_btn, 0, wx.LEFT, 5)
+		# Translators: Label for the 'Search' button.
+		self.searchBtn = wx.Button(self, label=_("Cari"))
+		self.searchBtn.Bind(wx.EVT_BUTTON, self.onSearchClick)
+		input_sizer.Add(self.searchBtn, 0, wx.LEFT, 5)
 
 		main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
 
 		# --- Toolbar ---
 		tool_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-		self.wotd_btn = wx.Button(self, label=_("Kata Hari Ini"))
-		self.wotd_btn.Bind(
+		# Translators: Label for the 'Word of the Day' button.
+		self.wotdBtn = wx.Button(self, label=_("Kata Hari Ini"))
+		self.wotdBtn.Bind(
 			wx.EVT_BUTTON,
-			self.on_wotd_click,
+			self.onWotdClick,
 		)
-		tool_sizer.Add(self.wotd_btn, 1, wx.RIGHT, 5)
+		tool_sizer.Add(self.wotdBtn, 1, wx.RIGHT, 5)
 
-		self.random_btn = wx.Button(self, label=_("Kata Acak"))
-		self.random_btn.Bind(
+		# Translators: Label for the 'Random Word' button.
+		self.randomBtn = wx.Button(self, label=_("Kata Acak"))
+		self.randomBtn.Bind(
 			wx.EVT_BUTTON,
-			self.on_random_click,
+			self.onRandomClick,
 		)
-		tool_sizer.Add(self.random_btn, 1, wx.RIGHT, 5)
+		tool_sizer.Add(self.randomBtn, 1, wx.RIGHT, 5)
 
-		self.history_btn = wx.Button(self, label=_("Riwayat"))
-		self.history_btn.Bind(wx.EVT_BUTTON, self.on_history)
-		tool_sizer.Add(self.history_btn, 1, wx.RIGHT, 5)
+		# Translators: Label for the 'History' button.
+		self.historyBtn = wx.Button(self, label=_("Riwayat"))
+		self.historyBtn.Bind(wx.EVT_BUTTON, self.onHistory)
+		tool_sizer.Add(self.historyBtn, 1, wx.RIGHT, 5)
 
-		self.fav_list_btn = wx.Button(self, label=_("Ditandai"))
-		self.fav_list_btn.Bind(wx.EVT_BUTTON, self.on_favorites)
-		tool_sizer.Add(self.fav_list_btn, 1)
+		# Translators: Label for the 'Favorites' button.
+		self.favListBtn = wx.Button(self, label=_("Ditandai"))
+		self.favListBtn.Bind(wx.EVT_BUTTON, self.onFavorites)
+		tool_sizer.Add(self.favListBtn, 1)
 
 		main_sizer.Add(tool_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
 		# --- Result Display ---
-		self.result_label = wx.StaticText(self, label=_("Hasil:"))
-		main_sizer.Add(self.result_label, 0, wx.LEFT | wx.RIGHT, 10)
+		# Translators: Label for the search result area.
+		self.resultLabel = wx.StaticText(self, label=_("Hasil:"))
+		main_sizer.Add(self.resultLabel, 0, wx.LEFT | wx.RIGHT, 10)
 
-		self.result_area = wx.TextCtrl(
+		self.resultArea = wx.TextCtrl(
 			self,
 			style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2,
 		)
-		main_sizer.Add(self.result_area, 1, wx.EXPAND | wx.ALL, 10)
+		main_sizer.Add(self.resultArea, 1, wx.EXPAND | wx.ALL, 10)
 
 		# --- Bottom Action Bar ---
 		bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-		self.toggle_fav_btn = wx.Button(self, label=_("Tandai"))
-		self.toggle_fav_btn.Bind(wx.EVT_BUTTON, self.on_toggle_favorite)
-		self.toggle_fav_btn.Disable()
-		bottom_sizer.Add(self.toggle_fav_btn, 0, wx.RIGHT, 10)
+		# Translators: Label for the 'Bookmark' / 'Mark' button.
+		self.toggleFavBtn = wx.Button(self, label=_("Tandai"))
+		self.toggleFavBtn.Bind(wx.EVT_BUTTON, self.onToggleFavorite)
+		self.toggleFavBtn.Disable()
+		bottom_sizer.Add(self.toggleFavBtn, 0, wx.RIGHT, 10)
 
-		self.copy_btn = wx.Button(self, label=_("Salin"))
-		self.copy_btn.Bind(wx.EVT_BUTTON, self.on_copy)
-		self.copy_btn.Disable()
-		bottom_sizer.Add(self.copy_btn, 0, wx.RIGHT, 10)
+		# Translators: Label for the 'Copy' button.
+		self.copyBtn = wx.Button(self, label=_("Salin"))
+		self.copyBtn.Bind(wx.EVT_BUTTON, self.onCopy)
+		self.copyBtn.Disable()
+		bottom_sizer.Add(self.copyBtn, 0, wx.RIGHT, 10)
 
+		# Translators: Label for the 'Close' button.
 		close_btn = wx.Button(self, wx.ID_CANCEL, label=_("Tutup"))
-		close_btn.Bind(wx.EVT_BUTTON, self.on_close_button)
+		close_btn.Bind(wx.EVT_BUTTON, self.onCloseButton)
 		bottom_sizer.Add(close_btn, 0)
 
 		main_sizer.Add(bottom_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
 		self.SetSizer(main_sizer)
-		self.search_box.SetFocus()
+		self.searchBox.SetFocus()
 
 	def Centers(self):
 		self.CenterOnScreen()
 
-	def on_close_button(self, event: wx.CommandEvent):
+	def onCloseButton(self, event: wx.CommandEvent):
+		"""
+		Event handler for the close button.
+		"""
 		self.Close()
 
-	def on_char_hook(self, event: wx.KeyEvent):
+	def onCharHook(self, event: wx.KeyEvent):
+		"""
+		Event handler for keyboard hooking, specifically the Escape key.
+		"""
 		if event.GetKeyCode() == wx.WXK_ESCAPE:
 			self.Close()
 		else:
 			event.Skip()
 
-	def on_copy(self, event: wx.CommandEvent):
-		text = self.result_area.GetValue()
+	def onCopy(self, event: wx.CommandEvent):
+		"""
+		Event handler for copying result text to clipboard.
+		"""
+		text = self.resultArea.GetValue()
 		if text:
 			if api.copyToClip(text):
+				# Translators: Message announced when text is copied to clipboard.
 				nvdaUI.message(_("Disalin ke papan klip."))
 			else:
+				# Translators: Message announced when copying fails.
 				nvdaUI.message(_("Gagal menyalin."))
 
-	def on_search_click(self, event: wx.CommandEvent | None):
-		query = self.search_box.GetValue().strip()
+	def onSearchClick(self, event: wx.CommandEvent | None):
+		"""
+		Event handler for the search button.
+		"""
+		query = self.searchBox.GetValue().strip()
 		if query:
-			self.do_api_call(lambda: self.client.search(query))
+			self.doApiCall(lambda: self.client.search(query))
 
-	def on_wotd_click(self, event: wx.CommandEvent):
-		self.do_api_call(self.client.get_wotd)
+	def onWotdClick(self, event: wx.CommandEvent):
+		"""
+		Event handler for the Word of the Day button.
+		"""
+		self.doApiCall(self.client.getWotd)
 
-	def on_random_click(self, event: wx.CommandEvent):
-		self.do_api_call(self.client.get_random)
+	def onRandomClick(self, event: wx.CommandEvent):
+		"""
+		Event handler for the Random Word button.
+		"""
+		self.doApiCall(self.client.getRandom)
 
-	def on_history(self, event: wx.CommandEvent):
-		history = self.config.get_history()
+	def onHistory(self, event: wx.CommandEvent):
+		"""
+		Event handler for the History button.
+		"""
+		history = self.config.getHistory()
 		if not history:
+			# Translators: Message announced when history is empty.
 			nvdaUI.message(_("Riwayat kosong."))
 			return
 		dlg = SelectionDialog(
 			self,
+			# Translators: Title of the History dialog.
 			_("Riwayat Pencarian"),
 			history,
-			self.load_from_history,
-			delete_callback=self.delete_history_item,
-			clear_callback=self.clear_all_history,
+			self.loadFromHistory,
+			deleteCallback=self.deleteHistoryItem,
+			clearCallback=self.clearAllHistory,
 		)
 		dlg.ShowModal()
 
-	def delete_history_item(self, lemma: str):
-		self.config.remove_history(lemma)
+	def deleteHistoryItem(self, lemma: str):
+		"""
+		Deletes an item from the history.
+		"""
+		self.config.removeHistory(lemma)
 
-	def clear_all_history(self):
-		self.config.clear_history()
+	def clearAllHistory(self):
+		"""
+		Clears all items from the history.
+		"""
+		self.config.clearHistory()
 
-	def on_favorites(self, event: wx.CommandEvent):
-		favs = self.config.get_favorites()
+	def onFavorites(self, event: wx.CommandEvent):
+		"""
+		Event handler for the Favorites button.
+		"""
+		favs = self.config.getFavorites()
 		if not favs:
+			# Translators: Message announced when favorites list is empty.
 			nvdaUI.message(_("Belum ada kata yang ditandai."))
 			return
 		dlg = SelectionDialog(
 			self,
+			# Translators: Title of the Favorites dialog.
 			_("Daftar Ditandai"),
 			favs,
-			self.load_from_history,
-			delete_callback=self.delete_favorite_item,
+			self.loadFromHistory,
+			deleteCallback=self.deleteFavoriteItem,
 		)
 		dlg.ShowModal()
 
-	def delete_favorite_item(self, lemma: str):
-		self.config.remove_favorite(lemma)
-		if self.current_result and self.current_result.lemma == lemma:
-			self.toggle_fav_btn.SetLabel(_("Tandai"))
+	def deleteFavoriteItem(self, lemma: str):
+		"""
+		Deletes an item from the favorites list.
+		"""
+		self.config.removeFavorite(lemma)
+		if self.currentResult and self.currentResult.lemma == lemma:
+			# Translators: Label for the 'Bookmark' / 'Mark' button.
+			self.toggleFavBtn.SetLabel(_("Tandai"))
 
-	def load_from_history(self, query: str):
-		self.search_box.SetValue(query)
-		self.on_search_click(None)
+	def loadFromHistory(self, query: str):
+		"""
+		Loads a word from history and triggers a search.
+		"""
+		self.searchBox.SetValue(query)
+		self.onSearchClick(None)
 
-	def on_toggle_favorite(self, event: wx.CommandEvent):
-		if not self.current_result:
+	def onToggleFavorite(self, event: wx.CommandEvent):
+		"""
+		Event handler to toggle the favorite status of the current word.
+		"""
+		if not self.currentResult:
 			return
 
-		lemma = self.current_result.lemma
-		if self.config.is_favorite(lemma):
-			self.config.remove_favorite(lemma)
+		lemma = self.currentResult.lemma
+		if self.config.isFavorite(lemma):
+			self.config.removeFavorite(lemma)
+			# Translators: Message announced when a word is removed from favorites.
 			nvdaUI.message(_("Dihapus dari tandai."))
-			self.toggle_fav_btn.SetLabel(_("Tandai"))
+			# Translators: Label for the 'Bookmark' / 'Mark' button.
+			self.toggleFavBtn.SetLabel(_("Tandai"))
 		else:
-			self.config.add_favorite(lemma)
+			self.config.addFavorite(lemma)
+			# Translators: Message announced when a word is added to favorites.
 			nvdaUI.message(_("Ditandai."))
-			self.toggle_fav_btn.SetLabel(_("Hapus Tanda"))
+			# Translators: Label for the 'Remove Bookmark' button.
+			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
 
-	def do_api_call(self, func: Callable[[], KBBIResult]):
-		self.search_btn.Disable()
-		self.wotd_btn.Disable()
-		self.random_btn.Disable()
-		self.copy_btn.Disable()
-		self.toggle_fav_btn.Disable()
-		self.result_area.SetValue(_("Memuat..."))
+	def doApiCall(self, func: Callable[[], KBBIResult]):
+		"""
+		Executes an API call in a separate background thread.
+		"""
+		self.searchBtn.Disable()
+		self.wotdBtn.Disable()
+		self.randomBtn.Disable()
+		self.copyBtn.Disable()
+		self.toggleFavBtn.Disable()
+		# Translators: Text displayed when loading results.
+		self.resultArea.SetValue(_("Memuat..."))
 
 		threading.Thread(target=self._worker, args=(func,), daemon=True).start()
 
 	def _worker(self, func: Callable[[], KBBIResult]):
+		"""
+		Background thread worker for API calls.
+		"""
 		try:
 			result = func()
-			wx.CallAfter(self._on_success, result)
+			wx.CallAfter(self._onSuccess, result)
 		except Exception as e:
-			wx.CallAfter(self._on_error, str(e))
+			wx.CallAfter(self._onError, str(e))
 
-	def _on_success(self, result: KBBIResult):
-		self._enable_controls()
-		self.current_result = result
+	def _onSuccess(self, result: KBBIResult):
+		"""
+		Callback executed upon a successful API call.
+		"""
+		self._enableControls()
+		self.currentResult = result
 
 		# Update config/state
-		self.config.add_history(result.lemma)
+		self.config.addHistory(result.lemma)
 
 		# Update UI
-		text = self._format_result(result)
-		self.result_area.SetValue(text)
-		self.result_area.SetInsertionPoint(0)
-		self.result_area.ShowPosition(0)
+		text = self._formatResult(result)
+		self.resultArea.SetValue(text)
+		self.resultArea.SetInsertionPoint(0)
+		self.resultArea.ShowPosition(0)
 
 		# Set Focus to result for direct reading
-		self.result_area.SetFocus()
+		self.resultArea.SetFocus()
 
-		if self.config.is_favorite(result.lemma):
-			self.toggle_fav_btn.SetLabel(_("Hapus Tanda"))
+		if self.config.isFavorite(result.lemma):
+			# Translators: Label for the 'Remove Bookmark' button.
+			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
 		else:
-			self.toggle_fav_btn.SetLabel(_("Tandai"))
-		self.toggle_fav_btn.Enable()
-		self.copy_btn.Enable()
+			# Translators: Label for the 'Bookmark' / 'Mark' button.
+			self.toggleFavBtn.SetLabel(_("Tandai"))
+		self.toggleFavBtn.Enable()
+		self.copyBtn.Enable()
 
+		# Translators: Message announced when data fetching completes successfully.
 		nvdaUI.message(_("Selesai."))
 
-	def _on_error(self, error_msg: str):
-		self._enable_controls()
-		self.result_area.SetValue(error_msg)
+	def _onError(self, error_msg: str):
+		"""
+		Callback executed upon a failed API call.
+		"""
+		self._enableControls()
+		self.resultArea.SetValue(error_msg)
 		tones.beep(150, 100)
+		# Translators: Message announced when an error occurs during API call.
 		nvdaUI.message(_("Error."))
 
-	def _enable_controls(self):
-		self.search_btn.Enable()
-		self.wotd_btn.Enable()
-		self.random_btn.Enable()
+	def _enableControls(self):
+		"""
+		Re-enables the UI controls.
+		"""
+		self.searchBtn.Enable()
+		self.wotdBtn.Enable()
+		self.randomBtn.Enable()
 		# Note: copy and fav are enabled only on success,
 		# but we re-enable search controls here so user can try again.
 
-	def _format_result(self, res: KBBIResult) -> str:
+	def _formatResult(self, res: KBBIResult) -> str:
+		"""
+		Formats the KBBI result into a readable string.
+		"""
 		lines = []
 
 		for idx, entry in enumerate(res.entries, 1):

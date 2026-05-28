@@ -3,9 +3,16 @@ import json
 
 
 class ConfigManager:
+	"""
+	Manages the configuration, search history, and favorite words for Accessible KBBI.
+	"""
+
 	def __init__(self):
+		"""
+		Initializes the ConfigManager and loads existing data if available.
+		"""
 		super().__init__()
-		self.config_path = os.path.join(
+		self.configPath = os.path.join(
 			os.path.dirname(__file__),
 			"accessibleKBBI.json",
 		)
@@ -13,22 +20,35 @@ class ConfigManager:
 		self.load()
 
 	def load(self):
+		"""
+		Loads the configuration data from the JSON file.
+		"""
 		try:
-			if os.path.exists(self.config_path):
-				with open(self.config_path, "r", encoding="utf-8") as f:
+			if os.path.exists(self.configPath):
+				with open(self.configPath, "r", encoding="utf-8") as f:
 					self.data = json.load(f)
 		except Exception:
 			# If fails, use default
 			pass
 
 	def save(self):
+		"""
+		Saves the configuration data to the JSON file.
+		"""
 		try:
-			with open(self.config_path, "w", encoding="utf-8") as f:
+			with open(self.configPath, "w", encoding="utf-8") as f:
 				json.dump(self.data, f, ensure_ascii=False, indent=2)
 		except Exception:
 			pass
 
-	def add_history(self, lemma: str):
+	def addHistory(self, lemma: str):
+		"""
+		Adds a lemma to the search history.
+		Moves it to the top if it already exists, and limits the history to 50 items.
+
+		:param lemma: The word to add.
+		:type lemma: str
+		"""
 		if not lemma:
 			return
 		# Remove if exists to move to top
@@ -40,30 +60,71 @@ class ConfigManager:
 		self.data["history"] = self.data["history"][:50]
 		self.save()
 
-	def remove_history(self, lemma: str):
+	def removeHistory(self, lemma: str):
+		"""
+		Removes a lemma from the search history.
+
+		:param lemma: The word to remove.
+		:type lemma: str
+		"""
 		if lemma in self.data["history"]:
 			self.data["history"].remove(lemma)
 			self.save()
 
-	def get_history(self) -> list[str]:
+	def getHistory(self) -> list[str]:
+		"""
+		Retrieves the list of search history.
+
+		:return: List of past searches.
+		:rtype: list[str]
+		"""
 		return self.data["history"]
 
-	def clear_history(self):
+	def clearHistory(self):
+		"""
+		Clears the search history.
+		"""
 		self.data["history"] = []
 		self.save()
 
-	def add_favorite(self, lemma: str):
+	def addFavorite(self, lemma: str):
+		"""
+		Adds a lemma to the list of favorites.
+
+		:param lemma: The word to add.
+		:type lemma: str
+		"""
 		if lemma and lemma not in self.data["favorites"]:
 			self.data["favorites"].insert(0, lemma)
 			self.save()
 
-	def remove_favorite(self, lemma: str):
+	def removeFavorite(self, lemma: str):
+		"""
+		Removes a lemma from the list of favorites.
+
+		:param lemma: The word to remove.
+		:type lemma: str
+		"""
 		if lemma in self.data["favorites"]:
 			self.data["favorites"].remove(lemma)
 			self.save()
 
-	def is_favorite(self, lemma: str) -> bool:
+	def isFavorite(self, lemma: str) -> bool:
+		"""
+		Checks if a lemma is in the list of favorites.
+
+		:param lemma: The word to check.
+		:type lemma: str
+		:return: True if favorited, False otherwise.
+		:rtype: bool
+		"""
 		return lemma in self.data["favorites"]
 
-	def get_favorites(self) -> list[str]:
+	def getFavorites(self) -> list[str]:
+		"""
+		Retrieves the list of favorite words.
+
+		:return: List of favorited words.
+		:rtype: list[str]
+		"""
 		return self.data["favorites"]

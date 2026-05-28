@@ -9,11 +9,28 @@ USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 
 class KBBIClient:
+	"""
+	Client for fetching definitions from the KBBI API.
+	"""
+
 	def __init__(self):
+		"""
+		Initializes the KBBIClient.
+		"""
 		super().__init__()
 		self.timeout = 15
 
 	def _fetch(self, url: str) -> dict[str, Any] | None:
+		"""
+		Makes an HTTP GET request to the given URL and parses the JSON response.
+
+		:param url: The API endpoint URL to fetch.
+		:type url: str
+		:return: A dictionary containing the JSON response, or None if the request fails.
+		:rtype: dict[str, Any] | None
+		:raises ValueError: If the API returns a 404 (Not Found).
+		:raises ConnectionError: If there's a network or server error.
+		"""
 		req = request.Request(url)
 		req.add_header("User-Agent", USER_AGENT)
 		try:
@@ -30,7 +47,16 @@ class KBBIClient:
 			raise ConnectionError(f"Terjadi kesalahan: {str(e)}")
 		return None
 
-	def _parse_response(self, data: dict[str, Any] | None) -> KBBIResult:
+	def _parseResponse(self, data: dict[str, Any] | None) -> KBBIResult:
+		"""
+		Parses the raw JSON response from the API into a KBBIResult object.
+
+		:param data: The parsed JSON dictionary from the API.
+		:type data: dict[str, Any] | None
+		:return: A KBBIResult object containing the parsed lemma and entries.
+		:rtype: KBBIResult
+		:raises ValueError: If the data format is invalid.
+		"""
 		if not data or "entries" not in data:
 			raise ValueError("Format data tidak valid.")
 
@@ -66,17 +92,37 @@ class KBBIClient:
 		return KBBIResult(lemma=lemma, entries=entries_list)
 
 	def search(self, query: str) -> KBBIResult:
+		"""
+		Searches for a specific word in the KBBI.
+
+		:param query: The word to search for.
+		:type query: str
+		:return: The search result containing definitions.
+		:rtype: KBBIResult
+		"""
 		safe_query = parse.quote(query)
 		url = f"{API_BASE_URL}/entry/{safe_query}"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)
 
-	def get_wotd(self) -> KBBIResult:
+	def getWotd(self) -> KBBIResult:
+		"""
+		Fetches the Word of the Day from KBBI.
+
+		:return: The Word of the Day result.
+		:rtype: KBBIResult
+		"""
 		url = f"{API_BASE_URL}/entry/_wotd"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)
 
-	def get_random(self) -> KBBIResult:
+	def getRandom(self) -> KBBIResult:
+		"""
+		Fetches a random word from KBBI.
+
+		:return: A random word result.
+		:rtype: KBBIResult
+		"""
 		url = f"{API_BASE_URL}/entry/_random"
 		data = self._fetch(url)
-		return self._parse_response(data)
+		return self._parseResponse(data)
