@@ -23,7 +23,13 @@ pythonSources: list[str] = ["addon/globalPlugins/accessibleKBBI/*.py", "addon/in
 
 i18nSources: list[str] = pythonSources + ["buildVars.py"]
 
-excludedFiles: list[str] = []
+excludedFiles: list[str] = [
+	"__pycache__/*",
+	"**/__pycache__/*",
+	"*.pyc",
+	"*.pyo",
+	"globalPlugins/accessibleKBBI/accessibleKBBI.json",
+]
 
 baseLanguage: str = "id"
 
