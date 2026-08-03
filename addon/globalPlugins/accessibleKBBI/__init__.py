@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 # Accessible KBBI for NVDA
 # Copyright (C) 2026 Muhammad
 
 import addonHandler
-import globalPluginHandler
-import scriptHandler
-import gui
-import wx
 import api
-import ui
-import textInfos
-import NVDAObjects.behaviors
+import globalPluginHandler
+import gui
 import inputCore
+import NVDAObjects.behaviors
+import scriptHandler
+import textInfos
+import ui
+import wx
+
 from .interface import KBBIDialog
 
 addonHandler.initTranslation()

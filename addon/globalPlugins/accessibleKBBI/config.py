@@ -5,7 +5,6 @@ from typing import Any
 import globalVars
 from logHandler import log
 
-
 CONFIG_DIR_NAME = "accessibleKBBI"
 CONFIG_FILE_NAME = "accessibleKBBI.json"
 
