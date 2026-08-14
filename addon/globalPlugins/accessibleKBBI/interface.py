@@ -1,11 +1,13 @@
-import wx
 import threading
-import addonHandler
-import ui as nvdaUI
-import api
-import tones
 import unicodedata
 from collections.abc import Callable
+
+import addonHandler
+import api
+import tones
+import ui as nvdaUI
+import wx
+
 from .client import KBBIClient
 from .config import ConfigManager
 from .models import KBBIResult
@@ -26,7 +28,7 @@ class SelectionDialog(wx.Dialog):
 		deleteCallback: Callable[[str], None] | None = None,
 		clearCallback: Callable[[], None] | None = None,
 	):
-		super(SelectionDialog, self).__init__(parent, title=title, size=(500, 450))
+		super().__init__(parent, title=title, size=(500, 450))
 		self.callback = callback
 		self.deleteCallback = deleteCallback
 		self.clearCallback = clearCallback
@@ -107,7 +109,7 @@ class KBBIDialog(wx.Dialog):
 	"""Main dialog for the Accessible KBBI add-on."""
 
 	def __init__(self, parent: wx.Window):
-		super(KBBIDialog, self).__init__(
+		super().__init__(
 			parent,
 			# Translators: Title of the Accessible KBBI dialog.
 			title=_("Accessible KBBI"),

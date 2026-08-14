@@ -1,10 +1,10 @@
 import json
-from urllib import request, error, parse
 from typing import Any
+from urllib import error, parse, request
 
 from logHandler import log
 
-from .models import KBBIResult, Entry, Definition, Label
+from .models import Definition, Entry, KBBIResult, Label
 
 API_BASE_URL = "https://kbbi.raf555.dev/api/v1"
 USER_AGENT = (
@@ -41,8 +41,8 @@ class KBBIClient:
 				raise ValueError("Entri tidak ditemukan.")
 			raise ConnectionError(f"Gagal menghubungi server: {e.code}")
 		except Exception as e:
-			log.error(f"KBBI API Error: {str(e)}", exc_info=True)
-			raise ConnectionError(f"Terjadi kesalahan: {str(e)}")
+			log.error(f"KBBI API Error: {e!s}", exc_info=True)
+			raise ConnectionError(f"Terjadi kesalahan: {e!s}")
 		return None
 
 	def _parseResponse(self, data: dict[str, Any] | None) -> KBBIResult:
