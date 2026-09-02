@@ -11,6 +11,7 @@ import scriptHandler
 import textInfos
 import ui
 import wx
+import winUser
 
 from .interface import KBBIDialog
 
@@ -24,51 +25,79 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self):
 		super().__init__()
 		self.dlg: KBBIDialog | None = None
+		self._focusObject = None
 
 	@scriptHandler.script(
 		# Translators: Description for the command to open the Accessible KBBI dialog.
 		description=_("Buka Accessible KBBI."),
 		category=inputCore.SCRCAT_MISC,
-		gesture="kb:NVDA+alt+k",
+		gesture="kb:NVDA+windows+k",
 	)
 	def script_showSearchDialog(self, gesture: inputCore.InputGesture):
 		if self.dlg and not self.dlg.isClosing():
-			self.dlg.Raise()
-			self.dlg.SetFocus()
+			self._focusDialog()
 			# Translators: Message announced when the KBBI dialog is already open and focused.
 			ui.message(_("Dialog Accessible KBBI sudah terbuka."))
 			return
 
+		self._focusObject = api.getFocusObject()
 		self.dlg = KBBIDialog(gui.mainFrame)
-		self.dlg.Show()
 		self.dlg.Bind(wx.EVT_CLOSE, self.onClose)
+		self._focusDialog()
 
 	@scriptHandler.script(
 		# Translators: Description for the command to search selected text in Accessible KBBI.
 		description=_("Cari teks terpilih di Accessible KBBI."),
 		category=inputCore.SCRCAT_MISC,
-		gesture="kb:NVDA+shift+alt+k",
+		gesture="kb:NVDA+windows+shift+k",
 	)
 	def script_searchSelection(self, gesture: inputCore.InputGesture):
-		if self.dlg and not self.dlg.isClosing():
-			self.dlg.Raise()
-			self.dlg.SetFocus()
-			# Translators: Message announced when the KBBI dialog is already open and focused.
-			ui.message(_("Dialog Accessible KBBI sudah terbuka."))
-			return
-
+		dlg = self.dlg if self.dlg and not self.dlg.isClosing() else None
 		text = self._getSelectedText()
 		if not text:
 			# Translators: Message announced when no text is selected for search.
 			ui.message(_("Tidak ada teks yang dipilih."))
+			if dlg:
+				self._focusDialog()
 			return
 
+		if dlg:
+			dlg.searchBox.SetValue(text)
+			dlg.onSearchClick(None)
+			self._focusDialog()
+			return
+
+		self._focusObject = api.getFocusObject()
 		self.dlg = KBBIDialog(gui.mainFrame)
-		self.dlg.Show()
 		self.dlg.Bind(wx.EVT_CLOSE, self.onClose)
 
 		self.dlg.searchBox.SetValue(text)
 		self.dlg.onSearchClick(None)
+		self._focusDialog()
+
+	def _focusDialog(self) -> None:
+		"""Raise, foreground, and focus the existing dialog's search box."""
+		dlg = self.dlg
+		if not dlg or dlg.isClosing():
+			return
+		wx.CallAfter(self._focusDialogNow, dlg)
+		wx.CallLater(100, self._focusDialogNow, dlg)
+
+	def _focusDialogNow(self, dlg: KBBIDialog) -> None:
+		if self.dlg is not dlg or dlg.isClosing():
+			return
+		gui.mainFrame.prePopup()
+		try:
+			dlg.Show()
+			dlg.Raise()
+			dlg.SetFocus()
+			try:
+				winUser.setForegroundWindow(dlg.GetHandle())
+			except Exception:
+				pass
+			dlg.searchBox.SetFocus()
+		finally:
+			gui.mainFrame.postPopup()
 
 	def _getSelectedText(self) -> str | None:
 		"""
@@ -125,6 +154,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		self.dlg = None
 		dlg.destroyDialog()
+		focusObject = self._focusObject
+		self._focusObject = None
+		if focusObject:
+			wx.CallAfter(self._restoreFocus, focusObject)
+
+	def _restoreFocus(self, focusObject: object) -> None:
+		try:
+			focusObject.setFocus()
+		except Exception:
+			pass
 
 	def onClose(self, event: wx.Event):
 		self._destroyDialog()

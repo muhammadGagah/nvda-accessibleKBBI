@@ -3,6 +3,7 @@ import os
 from typing import Any
 
 import globalVars
+import NVDAState
 from logHandler import log
 
 CONFIG_DIR_NAME = "accessibleKBBI"
@@ -72,6 +73,8 @@ class ConfigManager:
 
 	def save(self) -> None:
 		"""Save configuration to the NVDA user configuration directory."""
+		if not NVDAState.shouldWriteToDisk():
+			return
 		try:
 			os.makedirs(self.configDir, exist_ok=True)
 			with open(self.configPath, "w", encoding="utf-8") as f:

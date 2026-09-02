@@ -36,9 +36,14 @@ class SelectionDialog(wx.Dialog):
 
 		sizer = wx.BoxSizer(wx.VERTICAL)
 
+		# Give the list a visible label that NVDA can associate with the control.
+		list_label = wx.StaticText(self, label=f"{title}:")
+		sizer.Add(list_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+
 		self.listBox = wx.ListBox(self, choices=self.choices)
 		self.listBox.Bind(wx.EVT_LISTBOX_DCLICK, self.onSelect)
 		sizer.Add(self.listBox, 1, wx.EXPAND | wx.ALL, 10)
+		self.Bind(wx.EVT_CHAR_HOOK, self.onCharHook)
 
 		btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -66,9 +71,9 @@ class SelectionDialog(wx.Dialog):
 		sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
 		self.SetSizer(sizer)
-		self.listBox.SetFocus()
 		if self.choices:
 			self.listBox.SetSelection(0)
+		wx.CallAfter(self.listBox.SetFocus)
 
 	def onSelect(self, event: wx.Event):
 		sel_idx = self.listBox.GetSelection()
@@ -76,6 +81,18 @@ class SelectionDialog(wx.Dialog):
 			selection = self.choices[sel_idx]
 			self.callback(selection)
 			self.Close()
+
+	def onCharHook(self, event: wx.KeyEvent):
+		focused = wx.Window.FindFocus()
+		if event.GetKeyCode() == wx.WXK_ESCAPE:
+			self.Close()
+		elif focused is self.listBox and event.GetKeyCode() in (
+			wx.WXK_RETURN,
+			wx.WXK_NUMPAD_ENTER,
+		):
+			self.onSelect(event)
+		else:
+			event.Skip()
 
 	def onDelete(self, event: wx.Event):
 		sel_idx = self.listBox.GetSelection()
@@ -87,6 +104,9 @@ class SelectionDialog(wx.Dialog):
 			if self.listBox.GetCount() > 0:
 				new_sel = min(sel_idx, self.listBox.GetCount() - 1)
 				self.listBox.SetSelection(new_sel)
+			self.listBox.SetFocus()
+			# Translators: Message announced after deleting a history or favorite item.
+			nvdaUI.message(_("Item dihapus."))
 
 	def onClear(self, event: wx.Event):
 		if self.choices and self.clearCallback:
@@ -98,11 +118,16 @@ class SelectionDialog(wx.Dialog):
 				_("Konfirmasi"),
 				wx.YES_NO | wx.ICON_QUESTION,
 			)
-			if dlg.ShowModal() == wx.ID_YES:
-				self.clearCallback()
-				self.listBox.Clear()
-				self.choices = []
-			dlg.Destroy()
+			try:
+				if dlg.ShowModal() == wx.ID_YES:
+					self.clearCallback()
+					self.listBox.Clear()
+					self.choices = []
+					self.listBox.SetFocus()
+					# Translators: Message announced after clearing a history or favorite list.
+					nvdaUI.message(_("Daftar dikosongkan."))
+			finally:
+				dlg.Destroy()
 
 
 class KBBIDialog(wx.Dialog):
@@ -121,6 +146,7 @@ class KBBIDialog(wx.Dialog):
 		self.config = ConfigManager()
 		self.currentResult: KBBIResult | None = None
 		self._isClosing = False
+		self._requestId = 0
 		self.Centers()
 
 		self._initUi()
@@ -141,6 +167,8 @@ class KBBIDialog(wx.Dialog):
 		input_sizer.Add(input_label, 0, wx.ALIGN_CENTER_VERTICAL | wx.RIGHT, 5)
 
 		self.searchBox = wx.TextCtrl(self, style=wx.TE_PROCESS_ENTER)
+		# Internal name used when locating the search input programmatically.
+		self.searchBox.SetName(_("Cari kata"))
 		self.searchBox.Bind(wx.EVT_TEXT_ENTER, self.onSearchClick)
 		input_sizer.Add(self.searchBox, 1, wx.EXPAND)
 
@@ -191,14 +219,16 @@ class KBBIDialog(wx.Dialog):
 			self,
 			style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2,
 		)
+		# Internal name used when locating the result output programmatically.
+		self.resultArea.SetName(_("Hasil pencarian"))
 		main_sizer.Add(self.resultArea, 1, wx.EXPAND | wx.ALL, 10)
 
 		# --- Bottom Action Bar ---
 		bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
 		# Translators: Label for the 'Bookmark' / 'Mark' button.
-		self.toggleFavBtn = wx.Button(self, label=_("Tandai"))
-		self.toggleFavBtn.Bind(wx.EVT_BUTTON, self.onToggleFavorite)
+		self.toggleFavBtn = wx.ToggleButton(self, label=_("Tandai"))
+		self.toggleFavBtn.Bind(wx.EVT_TOGGLEBUTTON, self.onToggleFavorite)
 		self.toggleFavBtn.Disable()
 		bottom_sizer.Add(self.toggleFavBtn, 0, wx.RIGHT, 10)
 
@@ -279,7 +309,10 @@ class KBBIDialog(wx.Dialog):
 			deleteCallback=self.deleteHistoryItem,
 			clearCallback=self.clearAllHistory,
 		)
-		dlg.ShowModal()
+		try:
+			dlg.ShowModal()
+		finally:
+			dlg.Destroy()
 
 	def deleteHistoryItem(self, lemma: str):
 		self.config.removeHistory(lemma)
@@ -301,13 +334,17 @@ class KBBIDialog(wx.Dialog):
 			self.loadFromHistory,
 			deleteCallback=self.deleteFavoriteItem,
 		)
-		dlg.ShowModal()
+		try:
+			dlg.ShowModal()
+		finally:
+			dlg.Destroy()
 
 	def deleteFavoriteItem(self, lemma: str):
 		self.config.removeFavorite(lemma)
 		if self.currentResult and self.currentResult.lemma == lemma:
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
+			self.toggleFavBtn.SetValue(False)
 
 	def loadFromHistory(self, query: str):
 		self.searchBox.SetValue(query)
@@ -324,12 +361,14 @@ class KBBIDialog(wx.Dialog):
 			nvdaUI.message(_("Dihapus dari tandai."))
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
+			self.toggleFavBtn.SetValue(False)
 		else:
 			self.config.addFavorite(lemma)
 			# Translators: Message announced when a word is added to favorites.
 			nvdaUI.message(_("Ditandai."))
 			# Translators: Label for the 'Remove Bookmark' button.
 			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
+			self.toggleFavBtn.SetValue(True)
 
 	def doApiCall(self, func: Callable[[], KBBIResult]):
 		if self.isClosing():
@@ -343,14 +382,16 @@ class KBBIDialog(wx.Dialog):
 		# Translators: Text displayed when loading results.
 		self.resultArea.SetValue(_("Memuat..."))
 
-		threading.Thread(target=self._worker, args=(func,), daemon=True).start()
+		self._requestId += 1
+		requestId = self._requestId
+		threading.Thread(target=self._worker, args=(func, requestId), daemon=True).start()
 
-	def _worker(self, func: Callable[[], KBBIResult]):
+	def _worker(self, func: Callable[[], KBBIResult], requestId: int):
 		try:
 			result = func()
-			self._callAfterIfOpen(self._onSuccess, result)
+			self._callAfterIfOpen(self._onSuccess, result, requestId)
 		except Exception as e:
-			self._callAfterIfOpen(self._onError, str(e))
+			self._callAfterIfOpen(self._onError, str(e), requestId)
 
 	def _callAfterIfOpen(self, callback: Callable[..., None], *args: object) -> None:
 		wx.CallAfter(self._runIfOpen, callback, *args)
@@ -360,8 +401,8 @@ class KBBIDialog(wx.Dialog):
 			return
 		callback(*args)
 
-	def _onSuccess(self, result: KBBIResult):
-		if self.isClosing():
+	def _onSuccess(self, result: KBBIResult, requestId: int):
+		if self.isClosing() or requestId != self._requestId:
 			return
 
 		self._enableControls()
@@ -382,24 +423,27 @@ class KBBIDialog(wx.Dialog):
 		if self.config.isFavorite(result.lemma):
 			# Translators: Label for the 'Remove Bookmark' button.
 			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
+			self.toggleFavBtn.SetValue(True)
 		else:
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
+			self.toggleFavBtn.SetValue(False)
 		self.toggleFavBtn.Enable()
 		self.copyBtn.Enable()
 
 		# Translators: Message announced when data fetching completes successfully.
-		nvdaUI.message(_("Selesai."))
+		nvdaUI.message(_("Hasil untuk {} tersedia.").format(result.lemma))
 
-	def _onError(self, error_msg: str):
-		if self.isClosing():
+	def _onError(self, error_msg: str, requestId: int):
+		if self.isClosing() or requestId != self._requestId:
 			return
 
 		self._enableControls()
 		self.resultArea.SetValue(error_msg)
+		self.resultArea.SetFocus()
 		tones.beep(150, 100)
 		# Translators: Message announced when an error occurs during API call.
-		nvdaUI.message(_("Error."))
+		nvdaUI.message(_("Error: {}").format(error_msg))
 
 	def _enableControls(self):
 		self.searchBtn.Enable()
