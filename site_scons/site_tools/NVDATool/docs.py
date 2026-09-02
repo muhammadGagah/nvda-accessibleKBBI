@@ -24,7 +24,7 @@ def md2html(
 	try:
 		with moFile.open("rb") as f:
 			_ = gettext.GNUTranslations(f).gettext
-	except Exception:
+	except (AttributeError, OSError):
 		summary = addon_info["addon_summary"]
 	else:
 		summary = _(addon_info["addon_summary"])

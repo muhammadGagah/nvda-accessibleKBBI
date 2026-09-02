@@ -12,6 +12,7 @@ import textInfos
 import ui
 import winUser
 import wx
+from logHandler import log
 
 from .interface import KBBIDialog
 
@@ -93,8 +94,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			dlg.SetFocus()
 			try:
 				winUser.setForegroundWindow(dlg.GetHandle())
-			except Exception:
-				pass
+			except OSError:
+				log.debugWarning("Unable to foreground the Accessible KBBI dialog", exc_info=True)
 			dlg.searchBox.SetFocus()
 		finally:
 			gui.mainFrame.postPopup()
@@ -117,16 +118,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				)
 				if info and info.text and not info.text.isspace():
 					return info.text.strip()
-			except Exception:
-				pass
+			except Exception:  # noqa: BLE001 - selection APIs vary across NVDA applications.
+				log.debugWarning("Tree interceptor selection is unavailable", exc_info=True)
 
 		# 2. Standard TextInfo (e.g. Word, Notepad)
 		try:
 			info = focus_obj.makeTextInfo(textInfos.POSITION_SELECTION)
 			if info and info.text and not info.text.isspace():
 				return info.text.strip()
-		except Exception:
-			pass
+		except Exception:  # noqa: BLE001 - selection APIs vary across NVDA applications.
+			log.debugWarning("Standard selection API is unavailable", exc_info=True)
 
 		# 3. Editable Text (Fallback for some edit fields)
 		if isinstance(focus_obj, NVDAObjects.behaviors.EditableText):
@@ -134,8 +135,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				info = focus_obj.makeTextInfo(textInfos.POSITION_SELECTION)
 				if info and info.text and not info.text.isspace():
 					return info.text.strip()
-			except Exception:
-				pass
+			except Exception:  # noqa: BLE001 - selection APIs vary across NVDA applications.
+				log.debugWarning("Editable text selection is unavailable", exc_info=True)
 
 		# 4. Terminal
 		if isinstance(focus_obj, NVDAObjects.behaviors.Terminal):
@@ -143,8 +144,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				info = focus_obj.makeTextInfo(textInfos.POSITION_SELECTION)
 				if info and info.text and not info.text.isspace():
 					return info.text.strip()
-			except Exception:
-				pass
+			except Exception:  # noqa: BLE001 - selection APIs vary across NVDA applications.
+				log.debugWarning("Terminal selection is unavailable", exc_info=True)
 
 		return None
 
@@ -162,8 +163,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def _restoreFocus(self, focusObject: object) -> None:
 		try:
 			focusObject.setFocus()
-		except Exception:
-			pass
+		except (AttributeError, RuntimeError, OSError):
+			log.debugWarning("Unable to restore focus to the previous NVDA object", exc_info=True)
 
 	def onClose(self, event: wx.Event):
 		self._destroyDialog()

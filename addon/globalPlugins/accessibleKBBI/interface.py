@@ -390,7 +390,7 @@ class KBBIDialog(wx.Dialog):
 		try:
 			result = func()
 			self._callAfterIfOpen(self._onSuccess, result, requestId)
-		except Exception as e:
+		except Exception as e:  # noqa: BLE001 - worker boundary must report unexpected API failures.
 			self._callAfterIfOpen(self._onError, str(e), requestId)
 
 	def _callAfterIfOpen(self, callback: Callable[..., None], *args: object) -> None:

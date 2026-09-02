@@ -41,7 +41,7 @@ class KBBIClient:
 				raise ValueError("Entri tidak ditemukan.")
 			raise ConnectionError(f"Gagal menghubungi server: {e.code}")
 		except Exception as e:
-			log.error(f"KBBI API Error: {e!s}", exc_info=True)
+			log.exception("KBBI API Error")
 			raise ConnectionError(f"Terjadi kesalahan: {e!s}")
 		return None
 

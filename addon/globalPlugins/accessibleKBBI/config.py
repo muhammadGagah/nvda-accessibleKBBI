@@ -80,7 +80,7 @@ class ConfigManager:
 			with open(self.configPath, "w", encoding="utf-8") as f:
 				json.dump(self.data, f, ensure_ascii=False, indent=2)
 		except OSError:
-			log.error("Failed to save Accessible KBBI config", exc_info=True)
+			log.exception("Failed to save Accessible KBBI config")
 
 	def addHistory(self, lemma: str) -> None:
 		"""Add a lemma to the top of search history."""
