@@ -10,8 +10,8 @@ import NVDAObjects.behaviors
 import scriptHandler
 import textInfos
 import ui
-import wx
 import winUser
+import wx
 
 from .interface import KBBIDialog
 
