@@ -9,7 +9,7 @@ from .models import Definition, Entry, KBBIResult, Label
 API_BASE_URL = "https://kbbi.raf555.dev/api/v1"
 USER_AGENT = (
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-	"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AccessibleKBBI/1.1"
+	"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 AccessibleKBBI/1.3"
 )
 
 
@@ -41,7 +41,7 @@ class KBBIClient:
 				raise ValueError("Entri tidak ditemukan.")
 			raise ConnectionError(f"Gagal menghubungi server: {e.code}")
 		except Exception as e:
-			log.error(f"KBBI API Error: {e!s}", exc_info=True)
+			log.exception("KBBI API Error")
 			raise ConnectionError(f"Terjadi kesalahan: {e!s}")
 		return None
 

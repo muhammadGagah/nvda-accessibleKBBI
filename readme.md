@@ -30,14 +30,14 @@ Kata yang Anda cari, termasuk teks yang dipilih melalui pintasan pencarian teks 
 
 Secara default, add-on ini menggunakan tombol pintas berikut:
 
-- **NVDA + Alt + K**: Membuka dialog utama Accessible KBBI.
-- **NVDA + Shift + Alt + K**: Mencari teks yang sedang dipilih (diblok) secara langsung. Jika tidak ada teks yang dipilih, akan muncul  peringatan.
+- **NVDA + Windows + K**: Membuka dialog utama Accessible KBBI.
+- **NVDA + Windows + Shift + K**: Mencari teks yang sedang dipilih (diblok) secara langsung. Jika tidak ada teks yang dipilih, akan muncul peringatan.
 
 *Catatan: Anda dapat mengubah tombol pintas ini melalui menu **Preferences -> Input gestures** di NVDA.*
 
 ### Antarmuka Dialog
 
-Setelah membuka dialog (`NVDA + Alt + K`), Anda akan menemukan elemen berikut:
+Setelah membuka dialog (`NVDA + Windows + K`), Anda akan menemukan elemen berikut:
 
 1.  **Kotak Pencarian**: Ketik kata yang ingin dicari di sini, lalu tekan Enter atau klik tombol **Cari**.
 2.  **Tombol Kata Hari Ini**: Menampilkan kata hari ini.

@@ -86,6 +86,9 @@ logger-objects = ["logHandler.log"]
 # sconstruct contains many inbuilt functions not recognised by the lint,
 # so ignore F821.
 "sconstruct" = ["F821"]
+# NVDA package directories use established names that do not follow PEP 8.
+"addon/globalPlugins/accessibleKBBI/__init__.py" = ["N999"]
+"site_scons/site_tools/NVDATool/__init__.py" = ["N999"]
 
 [tool.pyright]
 venvPath = ".venv"
