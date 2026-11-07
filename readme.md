@@ -17,6 +17,9 @@ Kata yang Anda cari, termasuk teks yang dipilih melalui pintasan pencarian teks 
 - **Riwayat Pencarian**: Menyimpan 50 pencarian terakhir Anda untuk akses cepat.
 - **Kata Ditandai (Favorit)**: Simpan kata-kata penting agar mudah ditemukan kembali.
 - **Salin Hasil**: Salin definisi lengkap ke papan klip (clipboard).
+- **Saran Kata**: Tampilkan daftar kata KBBI yang diawali teks yang Anda ketik. Jika kata tidak ditemukan, kata yang mirip akan disarankan secara otomatis.
+- **Kata Terkait**: Buka kata dasar, kata turunan, gabungan kata, varian, dan bentuk tidak baku langsung dari hasil pencarian tanpa mengetik ulang.
+- **Nama Label Lengkap**: Pilihan untuk menampilkan label seperti *Nomina* dan *Cakapan* alih-alih *n* dan *cak*.
 
 ## Instalasi
 
@@ -40,14 +43,19 @@ Secara default, add-on ini menggunakan tombol pintas berikut:
 Setelah membuka dialog (`NVDA + Windows + K`), Anda akan menemukan elemen berikut:
 
 1.  **Kotak Pencarian**: Ketik kata yang ingin dicari di sini, lalu tekan Enter atau klik tombol **Cari**.
+    -   **Tombol Saran**: Menampilkan daftar kata yang diawali teks di kotak pencarian (misalnya "makan" menampilkan "makan angin", "makan asam garam", dan seterusnya). Pilih kata untuk mencarinya.
+    -   Jika kata tidak ditemukan, area hasil menampilkan kata-kata yang mirip.
 2.  **Tombol Kata Hari Ini**: Menampilkan kata hari ini.
 3.  **Tombol Kata Acak**: Menampilkan kata acak.
 4.  **Tombol Riwayat**: Membuka daftar kata yang pernah dicari sebelumnya.
 5.  **Tombol Ditandai**: Membuka daftar kata yang telah Anda simpan/favoritkan.
-6.  **Area Hasil**: Menampilkan definisi lengkap. Anda dapat menggunakan panah untuk membaca baris per baris.
-    -   Informasi mencakup: Kata dasar, kata turunan, gabungan kata, peribahasa, dan contoh penggunaan.
-7.  **Tombol Tandai/Hapus Tanda**: Menambah atau menghapus kata yang sedang ditampilkan ke daftar favorit.
-8.  **Tombol Salin**: Menyalin seluruh teks hasil pencarian ke clipboard.
+6.  **Kotak Centang Tampilkan Nama Label Lengkap**: Menampilkan nama label seperti *Nomina* alih-alih kodenya seperti *n*. Pilihan ini disimpan.
+7.  **Area Hasil**: Menampilkan definisi lengkap. Anda dapat menggunakan panah untuk membaca baris per baris.
+    -   Informasi mencakup: Kata dasar, bentuk tidak baku, varian, kata turunan, gabungan kata, peribahasa, kiasan, dan contoh penggunaan.
+    -   Entri prakategorial (yang belum bermakna sebelum diberi imbuhan) ditandai dan merujuk ke kata turunannya.
+8.  **Tombol Tandai/Hapus Tanda**: Menambah atau menghapus kata yang sedang ditampilkan ke daftar favorit.
+9.  **Tombol Kata Terkait**: Membuka daftar kata dasar, kata turunan, gabungan kata, varian, dan bentuk tidak baku dari hasil saat ini. Pilih kata untuk langsung mencarinya.
+10. **Tombol Salin**: Menyalin seluruh teks hasil pencarian ke clipboard.
 
 ## Persyaratan Sistem
 
