@@ -17,7 +17,6 @@ from logHandler import log
 from .interface import KBBIDialog
 
 addonHandler.initTranslation()
-_ = wx.GetTranslation
 
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):

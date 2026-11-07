@@ -32,6 +32,14 @@ class Entry:
 	compoundWords: list[str] = field(default_factory=list)
 	metaphors: list[str] = field(default_factory=list)
 	proverbs: list[str] = field(default_factory=list)
+	# Bentuk tidak baku, e.g. "apotik" for "apotek".
+	nonStandardWords: list[str] = field(default_factory=list)
+	# Varian that have their own dictionary entry, e.g. "udeh" for "ude".
+	variants: list[str] = field(default_factory=list)
+	# Other ways to refer to the entry, which may have no entry of their own.
+	entryVariants: list[str] = field(default_factory=list)
+	# Prakategorial: no meaning on its own until affixed; has no definitions.
+	isPrecategorical: bool = False
 
 
 @dataclass

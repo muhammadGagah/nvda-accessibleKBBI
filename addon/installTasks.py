@@ -3,7 +3,6 @@ import gui
 import wx
 
 addonHandler.initTranslation()
-_ = wx.GetTranslation
 
 
 def onInstall():

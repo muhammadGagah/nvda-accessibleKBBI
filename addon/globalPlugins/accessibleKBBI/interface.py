@@ -8,12 +8,29 @@ import tones
 import ui as nvdaUI
 import wx
 
-from .client import KBBIClient
+from .client import EntryNotFoundError, KBBIClient
 from .config import ConfigManager
-from .models import KBBIResult
+from .models import KBBIResult, Label
 
 addonHandler.initTranslation()
-_ = wx.GetTranslation
+
+
+def _sizeDialog(dialog: wx.Dialog, sizer: wx.Sizer, preferredDip: tuple[int, int]) -> None:
+	"""Size a dialog so every control fits, scaled for the display's DPI.
+
+	The sizer decides the minimum size, so buttons are never clipped. The preferred size is
+	given in device-independent pixels and grows with Windows display scaling.
+	"""
+	dialog.SetSizerAndFit(sizer)
+	minimum = dialog.GetSize()
+	dialog.SetMinSize(minimum)
+	preferred = dialog.FromDIP(wx.Size(*preferredDip))
+	# Never open larger than 90% of the screen's work area (e.g. small or high-scale displays).
+	displayIndex = wx.Display.GetFromWindow(dialog)
+	workArea = wx.Display(max(displayIndex, 0)).GetClientArea()
+	width = min(preferred.width, workArea.width * 9 // 10)
+	height = min(preferred.height, workArea.height * 9 // 10)
+	dialog.SetSize(wx.Size(max(minimum.width, width), max(minimum.height, height)))
 
 
 class SelectionDialog(wx.Dialog):
@@ -28,7 +45,7 @@ class SelectionDialog(wx.Dialog):
 		deleteCallback: Callable[[str], None] | None = None,
 		clearCallback: Callable[[], None] | None = None,
 	):
-		super().__init__(parent, title=title, size=(500, 450))
+		super().__init__(parent, title=title, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
 		self.callback = callback
 		self.deleteCallback = deleteCallback
 		self.clearCallback = clearCallback
@@ -70,7 +87,8 @@ class SelectionDialog(wx.Dialog):
 
 		sizer.Add(btn_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
-		self.SetSizer(sizer)
+		_sizeDialog(self, sizer, (500, 420))
+		self.CenterOnParent()
 		if self.choices:
 			self.listBox.SetSelection(0)
 		wx.CallAfter(self.listBox.SetFocus)
@@ -138,7 +156,6 @@ class KBBIDialog(wx.Dialog):
 			parent,
 			# Translators: Title of the Accessible KBBI dialog.
 			title=_("Accessible KBBI"),
-			size=(700, 600),
 			style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
 		)
 
@@ -147,9 +164,11 @@ class KBBIDialog(wx.Dialog):
 		self.currentResult: KBBIResult | None = None
 		self._isClosing = False
 		self._requestId = 0
-		self.Centers()
+		self._suggestId = 0
+		self._isSuggesting = False
 
 		self._initUi()
+		self.Centers()
 		# Ensure result area is clean on start
 		self.resultArea.SetValue("")
 
@@ -176,6 +195,11 @@ class KBBIDialog(wx.Dialog):
 		self.searchBtn = wx.Button(self, label=_("Cari"))
 		self.searchBtn.Bind(wx.EVT_BUTTON, self.onSearchClick)
 		input_sizer.Add(self.searchBtn, 0, wx.LEFT, 5)
+
+		# Translators: Label for the button that lists KBBI words starting with the typed text.
+		self.suggestBtn = wx.Button(self, label=_("Saran"))
+		self.suggestBtn.Bind(wx.EVT_BUTTON, self.onSuggest)
+		input_sizer.Add(self.suggestBtn, 0, wx.LEFT, 5)
 
 		main_sizer.Add(input_sizer, 0, wx.EXPAND | wx.ALL, 10)
 
@@ -211,6 +235,15 @@ class KBBIDialog(wx.Dialog):
 		main_sizer.Add(tool_sizer, 0, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
 
 		# --- Result Display ---
+		self.fullLabelsCheck = wx.CheckBox(
+			self,
+			# Translators: Checkbox that shows label names such as "Nomina" instead of codes such as "n".
+			label=_("Tampilkan nama label lengkap"),
+		)
+		self.fullLabelsCheck.SetValue(self.config.getSetting("fullLabelNames"))
+		self.fullLabelsCheck.Bind(wx.EVT_CHECKBOX, self.onToggleFullLabels)
+		main_sizer.Add(self.fullLabelsCheck, 0, wx.LEFT | wx.RIGHT | wx.BOTTOM, 10)
+
 		# Translators: Label for the search result area.
 		self.resultLabel = wx.StaticText(self, label=_("Hasil:"))
 		main_sizer.Add(self.resultLabel, 0, wx.LEFT | wx.RIGHT, 10)
@@ -227,10 +260,16 @@ class KBBIDialog(wx.Dialog):
 		bottom_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
 		# Translators: Label for the 'Bookmark' / 'Mark' button.
-		self.toggleFavBtn = wx.ToggleButton(self, label=_("Tandai"))
-		self.toggleFavBtn.Bind(wx.EVT_TOGGLEBUTTON, self.onToggleFavorite)
+		self.toggleFavBtn = wx.Button(self, label=_("Tandai"))
+		self.toggleFavBtn.Bind(wx.EVT_BUTTON, self.onToggleFavorite)
 		self.toggleFavBtn.Disable()
 		bottom_sizer.Add(self.toggleFavBtn, 0, wx.RIGHT, 10)
+
+		# Translators: Label for the button that lists related words of the current result.
+		self.relatedBtn = wx.Button(self, label=_("Kata Terkait"))
+		self.relatedBtn.Bind(wx.EVT_BUTTON, self.onRelated)
+		self.relatedBtn.Disable()
+		bottom_sizer.Add(self.relatedBtn, 0, wx.RIGHT, 10)
 
 		# Translators: Label for the 'Copy' button.
 		self.copyBtn = wx.Button(self, label=_("Salin"))
@@ -245,7 +284,7 @@ class KBBIDialog(wx.Dialog):
 
 		main_sizer.Add(bottom_sizer, 0, wx.ALIGN_RIGHT | wx.ALL, 10)
 
-		self.SetSizer(main_sizer)
+		_sizeDialog(self, main_sizer, (760, 640))
 		self.searchBox.SetFocus()
 
 	def Centers(self):
@@ -344,7 +383,99 @@ class KBBIDialog(wx.Dialog):
 		if self.currentResult and self.currentResult.lemma == lemma:
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
-			self.toggleFavBtn.SetValue(False)
+
+	def onSuggest(self, event: wx.CommandEvent | None):
+		prefix = self.searchBox.GetValue().strip()
+		if not prefix:
+			# Translators: Message announced when Suggestions is used with an empty search field.
+			nvdaUI.message(_("Ketik awal kata terlebih dahulu."))
+			self.searchBox.SetFocus()
+			return
+		if self._isSuggesting:
+			return
+		self._suggestId += 1
+		suggestId = self._suggestId
+		# Keep the button enabled: disabling the focused button would move focus to the next control.
+		self._isSuggesting = True
+		# Translators: Message announced while word suggestions are loading.
+		nvdaUI.message(_("Memuat saran..."))
+		threading.Thread(target=self._suggestWorker, args=(prefix, suggestId), daemon=True).start()
+
+	def _suggestWorker(self, prefix: str, suggestId: int):
+		try:
+			suggestions = self.client.suggest(prefix)
+		except Exception as e:  # noqa: BLE001 - worker boundary must report unexpected API failures.
+			self._callAfterIfOpen(self._onSuggestError, str(e), suggestId)
+		else:
+			self._callAfterIfOpen(self._onSuggestions, prefix, suggestions, suggestId)
+
+	def _onSuggestions(self, prefix: str, suggestions: list[str], suggestId: int):
+		if suggestId != self._suggestId:
+			return
+		self._isSuggesting = False
+		if not suggestions:
+			# Translators: Message announced when no KBBI word starts with the typed text.
+			nvdaUI.message(_("Tidak ada saran untuk {}.").format(prefix))
+			self.searchBox.SetFocus()
+			return
+		self._showWordList(
+			# Translators: Title of the dialog listing KBBI words that start with the typed text.
+			_("Saran Kata"),
+			suggestions,
+		)
+
+	def _onSuggestError(self, errorMessage: str, suggestId: int):
+		if suggestId != self._suggestId:
+			return
+		self._isSuggesting = False
+		tones.beep(150, 100)
+		# Translators: Message announced when an error occurs during API call.
+		nvdaUI.message(_("Error: {}").format(errorMessage))
+
+	def onRelated(self, event: wx.CommandEvent):
+		words = self._relatedWords(self.currentResult) if self.currentResult else []
+		if not words:
+			# Translators: Message announced when the current result has no related words.
+			nvdaUI.message(_("Tidak ada kata terkait."))
+			return
+		self._showWordList(
+			# Translators: Title of the dialog listing words related to the current result.
+			_("Kata Terkait"),
+			words,
+		)
+
+	def _showWordList(self, title: str, words: list[str]):
+		"""Let the user pick a word from a list, then look it up."""
+		dlg = SelectionDialog(self, title, words, self.loadFromHistory)
+		try:
+			dlg.ShowModal()
+		finally:
+			dlg.Destroy()
+
+	@staticmethod
+	def _relatedWords(result: KBBIResult) -> list[str]:
+		"""Words in the result that have their own KBBI entry, without duplicates."""
+		words: list[str] = []
+		for entry in result.entries:
+			candidates = [
+				entry.baseWord,
+				*(definition.referencedLemma for definition in entry.definitions),
+				*entry.variants,
+				*entry.nonStandardWords,
+				*entry.derivedWords,
+				*entry.compoundWords,
+			]
+			for word in candidates:
+				word = unicodedata.normalize("NFKC", word).strip()
+				if word and word != result.lemma and word not in words:
+					words.append(word)
+		return words
+
+	def onToggleFullLabels(self, event: wx.CommandEvent):
+		self.config.setSetting("fullLabelNames", self.fullLabelsCheck.GetValue())
+		if self.currentResult:
+			self.resultArea.SetValue(self._formatResult(self.currentResult))
+			self.resultArea.SetInsertionPoint(0)
 
 	def loadFromHistory(self, query: str):
 		self.searchBox.SetValue(query)
@@ -361,24 +492,24 @@ class KBBIDialog(wx.Dialog):
 			nvdaUI.message(_("Dihapus dari tandai."))
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
-			self.toggleFavBtn.SetValue(False)
 		else:
 			self.config.addFavorite(lemma)
 			# Translators: Message announced when a word is added to favorites.
 			nvdaUI.message(_("Ditandai."))
 			# Translators: Label for the 'Remove Bookmark' button.
 			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
-			self.toggleFavBtn.SetValue(True)
 
 	def doApiCall(self, func: Callable[[], KBBIResult]):
 		if self.isClosing():
 			return
 
 		self.searchBtn.Disable()
+		self.suggestBtn.Disable()
 		self.wotdBtn.Disable()
 		self.randomBtn.Disable()
 		self.copyBtn.Disable()
 		self.toggleFavBtn.Disable()
+		self.relatedBtn.Disable()
 		# Translators: Text displayed when loading results.
 		self.resultArea.SetValue(_("Memuat..."))
 
@@ -391,7 +522,8 @@ class KBBIDialog(wx.Dialog):
 			result = func()
 			self._callAfterIfOpen(self._onSuccess, result, requestId)
 		except Exception as e:  # noqa: BLE001 - worker boundary must report unexpected API failures.
-			self._callAfterIfOpen(self._onError, str(e), requestId)
+			suggestions = e.suggestions if isinstance(e, EntryNotFoundError) else []
+			self._callAfterIfOpen(self._onError, str(e), requestId, suggestions)
 
 	def _callAfterIfOpen(self, callback: Callable[..., None], *args: object) -> None:
 		wx.CallAfter(self._runIfOpen, callback, *args)
@@ -423,34 +555,49 @@ class KBBIDialog(wx.Dialog):
 		if self.config.isFavorite(result.lemma):
 			# Translators: Label for the 'Remove Bookmark' button.
 			self.toggleFavBtn.SetLabel(_("Hapus Tanda"))
-			self.toggleFavBtn.SetValue(True)
 		else:
 			# Translators: Label for the 'Bookmark' / 'Mark' button.
 			self.toggleFavBtn.SetLabel(_("Tandai"))
-			self.toggleFavBtn.SetValue(False)
 		self.toggleFavBtn.Enable()
 		self.copyBtn.Enable()
+		self.relatedBtn.Enable(bool(self._relatedWords(result)))
 
 		# Translators: Message announced when data fetching completes successfully.
 		nvdaUI.message(_("Hasil untuk {} tersedia.").format(result.lemma))
 
-	def _onError(self, error_msg: str, requestId: int):
+	def _onError(self, error_msg: str, requestId: int, suggestions: list[str] | None = None):
 		if self.isClosing() or requestId != self._requestId:
 			return
 
 		self._enableControls()
-		self.resultArea.SetValue(error_msg)
+		text = error_msg
+		if suggestions:
+			# Translators: Heading before word suggestions when a searched word is not found.
+			text += "\n\n" + _("Mungkin yang Anda maksud:") + "\n" + "\n".join(suggestions)
+		self.resultArea.SetValue(text)
+		self.resultArea.SetInsertionPoint(0)
 		self.resultArea.SetFocus()
 		tones.beep(150, 100)
 		# Translators: Message announced when an error occurs during API call.
-		nvdaUI.message(_("Error: {}").format(error_msg))
+		message = _("Error: {}").format(error_msg)
+		if suggestions:
+			# Translators: Announced after "not found" when suggestions are listed in the result area.
+			message += " " + _("{count} saran kata tersedia.").format(count=len(suggestions))
+		nvdaUI.message(message)
 
 	def _enableControls(self):
 		self.searchBtn.Enable()
+		self.suggestBtn.Enable()
 		self.wotdBtn.Enable()
 		self.randomBtn.Enable()
 		# Note: copy and fav are enabled only on success,
 		# but we re-enable search controls here so user can try again.
+
+	def _labelText(self, label: Label) -> str:
+		"""Return the label code, or its full name such as "Nomina" when that option is on."""
+		if self.config.getSetting("fullLabelNames") and label.name:
+			return label.name
+		return label.code
 
 	def _formatResult(self, res: KBBIResult) -> str:
 		lines = []
@@ -467,11 +614,24 @@ class KBBIDialog(wx.Dialog):
 					f"  Kata Dasar: {unicodedata.normalize('NFKC', entry.baseWord)}",
 				)
 
+			for title, words in (
+				("Bentuk Tidak Baku", entry.nonStandardWords),
+				("Varian", entry.variants),
+				("Varian Entri", entry.entryVariants),
+			):
+				if words:
+					lines.append(f"  {title}: " + ", ".join(unicodedata.normalize("NFKC", w) for w in words))
+
+			if entry.isPrecategorical:
+				lines.append(
+					"  Prakategorial: kata ini belum bermakna sebelum diberi imbuhan; lihat kata turunannya.",
+				)
+
 			# Definitions
 			if entry.definitions:
 				lines.append("  Definisi:")
 				for i, definition in enumerate(entry.definitions, 1):
-					labels = ", ".join([lbl.code for lbl in definition.labels])
+					labels = ", ".join(self._labelText(lbl) for lbl in definition.labels)
 					label_part = f"[{labels}] " if labels else ""
 
 					def_text = unicodedata.normalize("NFKC", definition.definition)
@@ -507,6 +667,15 @@ class KBBIDialog(wx.Dialog):
 					"  Peribahasa: "
 					+ ", ".join(
 						[unicodedata.normalize("NFKC", w) for w in entry.proverbs],
+					),
+				)
+
+			# Metaphors
+			if entry.metaphors:
+				lines.append(
+					"  Kiasan: "
+					+ ", ".join(
+						[unicodedata.normalize("NFKC", w) for w in entry.metaphors],
 					),
 				)
 

@@ -8,10 +8,13 @@ from logHandler import log
 
 CONFIG_DIR_NAME = "accessibleKBBI"
 CONFIG_FILE_NAME = "accessibleKBBI.json"
+LIST_KEYS = ("history", "favorites")
+# Boolean preferences and their defaults.
+DEFAULT_SETTINGS: dict[str, bool] = {"fullLabelNames": False}
 
 
 class ConfigManager:
-	"""Manage search history and favorite words for Accessible KBBI."""
+	"""Manage search history, favorite words, and preferences for Accessible KBBI."""
 
 	def __init__(self):
 		super().__init__()
@@ -22,10 +25,10 @@ class ConfigManager:
 		self.load()
 
 	@staticmethod
-	def _defaultData() -> dict[str, list[str]]:
-		return {"history": [], "favorites": []}
+	def _defaultData() -> dict[str, Any]:
+		return {"history": [], "favorites": [], "settings": dict(DEFAULT_SETTINGS)}
 
-	def _loadJsonFile(self, path: str) -> dict[str, list[str]] | None:
+	def _loadJsonFile(self, path: str) -> dict[str, Any] | None:
 		try:
 			with open(path, "r", encoding="utf-8") as f:
 				rawData = json.load(f)
@@ -40,13 +43,19 @@ class ConfigManager:
 
 		return self._validateData(rawData, path)
 
-	def _validateData(self, data: Any, source: str) -> dict[str, list[str]] | None:
+	def _validateData(self, data: Any, source: str) -> dict[str, Any] | None:
 		if not isinstance(data, dict):
 			log.warning(f"Accessible KBBI config is not a JSON object: {source}")
 			return None
 
 		validData = self._defaultData()
-		for key in validData:
+		# Older configs have no settings; unknown or non-boolean values keep their defaults.
+		settings = data.get("settings", {})
+		if isinstance(settings, dict):
+			for name in DEFAULT_SETTINGS:
+				if isinstance(settings.get(name), bool):
+					validData["settings"][name] = settings[name]
+		for key in LIST_KEYS:
 			items = data.get(key, [])
 			if not isinstance(items, list):
 				log.warning(f"Accessible KBBI config key {key!r} is not a list: {source}")
@@ -75,12 +84,19 @@ class ConfigManager:
 		"""Save configuration to the NVDA user configuration directory."""
 		if not NVDAState.shouldWriteToDisk():
 			return
+		tempPath = f"{self.configPath}.tmp"
 		try:
 			os.makedirs(self.configDir, exist_ok=True)
-			with open(self.configPath, "w", encoding="utf-8") as f:
+			with open(tempPath, "w", encoding="utf-8") as f:
 				json.dump(self.data, f, ensure_ascii=False, indent=2)
+			# Replace in one step so an interrupted write never truncates the saved history.
+			os.replace(tempPath, self.configPath)
 		except OSError:
 			log.exception("Failed to save Accessible KBBI config")
+			try:
+				os.remove(tempPath)
+			except OSError:
+				pass
 
 	def addHistory(self, lemma: str) -> None:
 		"""Add a lemma to the top of search history."""
@@ -129,3 +145,14 @@ class ConfigManager:
 	def getFavorites(self) -> list[str]:
 		"""Return saved favorite words."""
 		return self.data["favorites"]
+
+	def getSetting(self, name: str) -> bool:
+		"""Return a boolean preference, or its default."""
+		return self.data["settings"].get(name, DEFAULT_SETTINGS[name])
+
+	def setSetting(self, name: str, value: bool) -> None:
+		"""Save a boolean preference."""
+		if name not in DEFAULT_SETTINGS:
+			raise KeyError(name)
+		self.data["settings"][name] = bool(value)
+		self.save()
